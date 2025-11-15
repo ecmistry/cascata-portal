@@ -45,9 +45,7 @@ export function getSessionCookieOptions(
   
   // Removed sensitive logging - only log in development
   if (process.env.NODE_ENV === "development") {
-    if (process.env.NODE_ENV === "development") {
-      console.log("[Cookie] Request protocol:", req.protocol, "isSecure:", isSecure);
-    }
+    console.log("[Cookie] Request protocol:", req.protocol, "isSecure:", isSecure);
   }
   
   return {

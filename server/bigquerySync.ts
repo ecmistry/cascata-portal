@@ -169,9 +169,10 @@ export async function syncCompanyData(companyId: number): Promise<SyncResult> {
     result.message = `Successfully synced ${result.stats.sqlHistoryImported} SQL records, ${result.stats.conversionRatesImported} conversion rates, and ${result.stats.actualsImported} actuals`;
     
     return result;
-  } catch (error: any) {
+  } catch (error) {
     result.success = false;
-    result.message = error.message;
+    const message = error instanceof Error ? error.message : String(error);
+    result.message = message;
     return result;
   }
 }
@@ -198,10 +199,11 @@ export async function testConnection(companyId: number): Promise<{ success: bool
     };
 
     return await bigquery.testBigQueryConnection(config);
-  } catch (error: any) {
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     return {
       success: false,
-      message: error.message,
+      message,
     };
   }
 }

@@ -31,15 +31,15 @@ export function ConversionFunnel({ stages }: ConversionFunnelProps) {
   };
 
   return (
-    <Card>
+    <Card style={{ overflow: 'hidden' }}>
       <CardHeader>
         <CardTitle>Conversion Funnel</CardTitle>
         <CardDescription>Sales pipeline drop-off analysis</CardDescription>
       </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
+      <CardContent className="w-full" style={{ overflow: 'hidden' }}>
+        <div className="space-y-6 w-full" style={{ overflow: 'hidden' }}>
           {stages.map((stage, index) => {
-            const width = (stage.value / maxValue) * 100;
+            const width = Math.min((stage.value / maxValue) * 100, 100);
             const nextStage = stages[index + 1];
             const dropOffRate = nextStage 
               ? ((stage.value - nextStage.value) / stage.value) * 100 
@@ -49,27 +49,31 @@ export function ConversionFunnel({ stages }: ConversionFunnelProps) {
               : 0;
 
             return (
-              <div key={stage.name}>
+              <div key={stage.name} className="w-full" style={{ overflow: 'hidden' }}>
                 {/* Funnel Stage */}
-                <div className="relative">
+                <div className="relative w-full" style={{ overflow: 'hidden' }}>
                   <div 
-                    className="h-20 rounded-lg flex items-center justify-between px-6 transition-all hover:shadow-lg"
+                    className="h-20 rounded-lg flex items-center justify-between px-4 sm:px-6 transition-all hover:shadow-lg"
                     style={{ 
-                      width: `${Math.max(width, 20)}%`,
+                      width: `${Math.max(Math.min(width, 100), 20)}%`,
                       backgroundColor: stage.color,
-                      margin: '0 auto'
+                      marginLeft: 'auto',
+                      marginRight: 'auto',
+                      maxWidth: '100%',
+                      boxSizing: 'border-box',
+                      overflow: 'hidden'
                     }}
                   >
-                    <div className="text-white">
-                      <div className="text-sm font-medium opacity-90">{stage.name}</div>
-                      <div className="text-2xl font-bold">
+                    <div className="text-white min-w-0 flex-shrink">
+                      <div className="text-sm font-medium opacity-90 truncate">{stage.name}</div>
+                      <div className="text-2xl font-bold truncate">
                         {stage.name === 'Revenue' 
                           ? formatCurrency(stage.value)
                           : formatNumber(stage.value)
                         }
                       </div>
                     </div>
-                    <div className="text-white text-right">
+                    <div className="text-white text-right flex-shrink-0 ml-4">
                       <div className="text-sm opacity-90">of total</div>
                       <div className="text-xl font-semibold">{stage.percentage.toFixed(1)}%</div>
                     </div>

@@ -61,9 +61,11 @@ export function serveStatic(app: Express) {
   const distPath = path.resolve(projectRoot, "dist", "public");
   
   if (!fs.existsSync(distPath)) {
-    console.error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`
-    );
+    if (process.env.NODE_ENV === "development") {
+      console.error(
+        `Could not find the build directory: ${distPath}, make sure to build the client first`
+      );
+    }
     return;
   }
 
@@ -73,7 +75,9 @@ export function serveStatic(app: Express) {
   app.use("*", (_req, res) => {
     const indexPath = path.resolve(distPath, "index.html");
     if (!fs.existsSync(indexPath)) {
-      console.error(`Could not find index.html at: ${indexPath}`);
+      if (process.env.NODE_ENV === "development") {
+        console.error(`Could not find index.html at: ${indexPath}`);
+      }
       res.status(500).send("Application not properly built. Please run 'pnpm build'.");
       return;
     }

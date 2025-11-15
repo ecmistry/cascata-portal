@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, Plus, FolderOpen, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, Plus, FolderOpen, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
+import type { Company } from "@/types/api";
 
 const menuItems = [
   { icon: LayoutDashboard, label: "Page 1", path: "/" },
@@ -121,8 +122,16 @@ function DashboardLayoutContent({
   const { state, toggleSidebar } = useSidebar();
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
+  const [settingsExpanded, setSettingsExpanded] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
+  
+  // Auto-expand settings if on a settings page
+  useEffect(() => {
+    if (location === "/portal-stats" || location === "/change-history") {
+      setSettingsExpanded(true);
+    }
+  }, [location]);
   
   // Fetch companies/models for sidebar
   const { data: companies = [], isLoading: companiesLoading } = trpc.company.list.useQuery(undefined, {
@@ -237,7 +246,7 @@ function DashboardLayoutContent({
                     </div>
                   </SidebarMenuItem>
                 ) : (
-                  companies.map((company: any) => {
+                  companies.map((company: Company) => {
                     const isActive = currentModelId === company.id;
                     return (
                       <SidebarMenuItem key={company.id}>
@@ -259,6 +268,91 @@ function DashboardLayoutContent({
                   })
                 )}
               </SidebarMenu>
+            </div>
+
+            {/* Settings Section */}
+            <div className="border-t border-sidebar-border">
+              {!isCollapsed && (
+                <div className="px-2 py-2">
+                  <button
+                    onClick={() => setSettingsExpanded(!settingsExpanded)}
+                    className="flex items-center gap-2 w-full px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider hover:bg-accent rounded-md transition-colors"
+                  >
+                    {settingsExpanded ? (
+                      <ChevronDown className="h-3 w-3" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" />
+                    )}
+                    Settings
+                  </button>
+                </div>
+              )}
+              {settingsExpanded && !isCollapsed && (
+                <SidebarMenu className="px-2 py-1">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/portal-stats"}
+                      onClick={() => setLocation("/portal-stats")}
+                      tooltip="Portal Stats"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/portal-stats" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <BarChart3
+                        className={`h-4 w-4 ${location === "/portal-stats" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                      <span className={location === "/portal-stats" ? "font-medium" : ""}>Portal Stats</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/change-history"}
+                      onClick={() => setLocation("/change-history")}
+                      tooltip="Change History"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/change-history" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <History
+                        className={`h-4 w-4 ${location === "/change-history" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                      <span className={location === "/change-history" ? "font-medium" : ""}>Change History</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              )}
+              {isCollapsed && (
+                <SidebarMenu className="px-2 py-1">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/portal-stats"}
+                      onClick={() => setLocation("/portal-stats")}
+                      tooltip="Portal Stats"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/portal-stats" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <BarChart3
+                        className={`h-4 w-4 ${location === "/portal-stats" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/change-history"}
+                      onClick={() => setLocation("/change-history")}
+                      tooltip="Change History"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/change-history" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <History
+                        className={`h-4 w-4 ${location === "/change-history" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              )}
             </div>
             
           </SidebarContent>

@@ -79,9 +79,14 @@ async function startServer() {
         key: readFileSync(sslKeyPath),
       };
       server = createHttpsServer(httpsOptions, app);
-      console.log("HTTPS enabled with SSL certificates");
+      if (process.env.NODE_ENV === "development") {
+        console.log("HTTPS enabled with SSL certificates");
+      }
     } catch (error) {
-      console.warn("Failed to load SSL certificates, falling back to HTTP:", error);
+      if (process.env.NODE_ENV === "development") {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn("Failed to load SSL certificates, falling back to HTTP:", message);
+      }
       server = createHttpServer(app);
     }
   } else {
@@ -98,7 +103,7 @@ async function startServer() {
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);
 
-  if (port !== preferredPort) {
+  if (port !== preferredPort && process.env.NODE_ENV === "development") {
     console.log(`Port ${preferredPort} is busy, using port ${port} instead`);
   }
 
@@ -106,11 +111,17 @@ async function startServer() {
   const domain = process.env.DOMAIN || "localhost";
   
   server.listen(port, () => {
-    console.log(`Server running on ${protocol}://${domain}:${port}/`);
-    if (useHttps) {
-      console.log(`HTTPS enabled - accessible at https://${domain}${port === 443 ? "" : `:${port}`}`);
+    if (process.env.NODE_ENV === "development") {
+      console.log(`Server running on ${protocol}://${domain}:${port}/`);
+      if (useHttps) {
+        console.log(`HTTPS enabled - accessible at https://${domain}${port === 443 ? "" : `:${port}`}`);
+      }
     }
   });
 }
 
-startServer().catch(console.error);
+startServer().catch((error) => {
+  const message = error instanceof Error ? error.message : String(error);
+  console.error("Failed to start server:", message);
+  process.exit(1);
+});

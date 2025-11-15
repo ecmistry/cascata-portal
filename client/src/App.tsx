@@ -15,6 +15,8 @@ import WhatIfAnalysis from "./pages/WhatIfAnalysis";
 import Scenarios from "./pages/Scenarios";
 import ScenarioDetail from "./pages/ScenarioDetail";
 import Login from "./pages/Login";
+import PortalStats from "./pages/PortalStats";
+import ChangeHistory from "./pages/ChangeHistory";
 
 function Router() {
   return (
@@ -30,6 +32,8 @@ function Router() {
       <Route path={"/whatif/:id"} component={WhatIfAnalysis} />
       <Route path={"/scenarios/:id"} component={Scenarios} />
       <Route path={"/scenario/:id"} component={ScenarioDetail} />
+      <Route path={"/portal-stats"} component={PortalStats} />
+      <Route path={"/change-history"} component={ChangeHistory} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />

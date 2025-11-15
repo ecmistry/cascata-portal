@@ -28,9 +28,14 @@ export function registerOAuthRoutes(app: Express) {
         // Try to create user in database (may fail if DB not configured)
         try {
           await db.upsertUser(devUser);
-          console.log("[Dev Auth] Created/updated dev user in database");
+          if (process.env.NODE_ENV === "development") {
+            console.log("[Dev Auth] Created/updated dev user in database");
+          }
         } catch (dbError) {
-          console.warn("[Dev Auth] Database not available, continuing without DB user:", dbError);
+          if (process.env.NODE_ENV === "development") {
+            const message = dbError instanceof Error ? dbError.message : String(dbError);
+            console.warn("[Dev Auth] Database not available, continuing without DB user:", message);
+          }
           // Continue without database - session will still work
         }
 
@@ -43,10 +48,15 @@ export function registerOAuthRoutes(app: Express) {
         const cookieOptions = getSessionCookieOptions(req);
         res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_DURATION_MS });
 
-        console.log("[Dev Auth] Created dev session for", devOpenId);
+        if (process.env.NODE_ENV === "development") {
+          console.log("[Dev Auth] Created dev session for", devOpenId);
+        }
         res.redirect(302, "/");
       } catch (error) {
-        console.error("[Dev Auth] Failed to create dev session:", error);
+        if (process.env.NODE_ENV === "development") {
+          const message = error instanceof Error ? error.message : String(error);
+          console.error("[Dev Auth] Failed to create dev session:", message);
+        }
         res.status(500).json({ 
           error: "Dev login failed", 
           details: String(error),
@@ -92,7 +102,10 @@ export function registerOAuthRoutes(app: Express) {
 
       res.redirect(302, "/");
     } catch (error) {
-      console.error("[OAuth] Callback failed", error);
+      if (process.env.NODE_ENV === "development") {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error("[OAuth] Callback failed", message);
+      }
       res.status(500).json({ error: "OAuth callback failed" });
     }
   });

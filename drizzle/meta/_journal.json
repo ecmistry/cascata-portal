@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1763135649277,
+      "tag": "0000_familiar_proemial_gods",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1763135762841,
+      "tag": "0001_polite_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1763138904373,
+      "tag": "0002_opposite_boomer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1763153745247,
+      "tag": "0003_brown_captain_britain",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1763230183831,
+      "tag": "0004_worthless_kronos",
+      "breakpoints": true
+    }
+  ]
+}

@@ -38,7 +38,13 @@ export default function Scenarios() {
   // Fetch scenarios
   const { data: scenarios = [], isLoading, refetch } = trpc.scenario.list.useQuery(
     { companyId },
-    { refetchOnWindowFocus: false }
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+
+  // Fetch company data to ensure we have the right context
+  const { data: company } = trpc.company.get.useQuery(
+    { id: companyId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
   );
 
   // Delete scenario mutation

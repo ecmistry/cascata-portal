@@ -1,6 +1,16 @@
 import { BigQuery, type BigQueryOptions } from "@google-cloud/bigquery";
-import type { BigQueryConfig } from "./bigquerySync";
 import { ERROR_MESSAGES } from '@shared/const';
+
+export interface BigQueryConfig {
+  projectId: string;
+  datasetId: string;
+  credentials?: string | object;
+  tables: {
+    sqlHistory?: string;
+    conversionRates?: string;
+    actuals?: string;
+  };
+}
 
 export type SQLHistoryRow = {
   region: string;
@@ -28,15 +38,18 @@ export type ActualRow = {
 
 /**
  * Sanitize BigQuery identifier to prevent SQL injection
- * Only allows alphanumeric, underscore, dash, and dot characters
+ * 
+ * Note: Individual identifiers (projectId, datasetId, tableName) cannot contain dots.
+ * Dots are only used in query templates to construct fully qualified names like `project.dataset.table`.
+ * This ensures that user-provided identifiers cannot inject SQL through dot notation.
  */
 function sanitizeIdentifier(identifier: string): string {
   if (!identifier || typeof identifier !== 'string') {
     throw new Error('Invalid identifier: must be a non-empty string');
   }
   
-  // BigQuery identifiers can contain: letters, numbers, underscore, dash, and dot
-  // But we'll be more restrictive for security
+  // Only allow alphanumeric, underscore, and dash for security
+  // Dots are NOT allowed in individual identifiers - they are hardcoded in query templates
   if (!/^[a-zA-Z0-9_-]+$/.test(identifier)) {
     throw new Error(`Invalid identifier format: ${identifier}. Only alphanumeric, underscore, and dash are allowed.`);
   }
@@ -240,5 +253,42 @@ export async function testBigQueryConnection(config: BigQueryConfig): Promise<{ 
       success: false, 
       message
     };
+  }
+}
+
+/**
+ * List available tables in a BigQuery dataset
+ * @param config - BigQuery configuration
+ * @returns Array of table names
+ */
+export async function listAvailableTables(config: BigQueryConfig): Promise<string[]> {
+  const client = createBigQueryClient(config);
+  
+  // Sanitize identifiers
+  const projectId = sanitizeIdentifier(config.projectId);
+  const datasetId = sanitizeIdentifier(config.datasetId);
+  
+  // Query INFORMATION_SCHEMA to list tables
+  const query = `
+    SELECT table_name 
+    FROM \`${projectId}.${datasetId}.INFORMATION_SCHEMA.TABLES\`
+    WHERE table_type = 'BASE TABLE'
+    ORDER BY table_name
+  `;
+  
+  try {
+    const [rows] = await client.query({ query });
+    interface BigQueryTableRow {
+      table_name: string;
+    }
+    return rows.map((row: BigQueryTableRow) => row.table_name);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (process.env.NODE_ENV === "development") {
+      console.error('[BigQuery] Failed to list tables:', error);
+    } else {
+      console.error('[BigQuery] Failed to list tables:', message);
+    }
+    throw new Error(`Failed to list tables: ${message}`);
   }
 }

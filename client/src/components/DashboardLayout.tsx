@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, Plus, FolderOpen, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, Plus, FolderOpen, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight, Database } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -29,16 +29,31 @@ import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
 import type { Company } from "@/types/api";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Page 1", path: "/" },
-  { icon: Users, label: "Page 2", path: "/some-path" },
-];
-
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 240; /* Narrower sidebar for cleaner look */
 const MIN_WIDTH = 180;
 const MAX_WIDTH = 320;
 
+/**
+ * DashboardLayout Component
+ * 
+ * Main layout component for the application, providing:
+ * - Resizable sidebar with navigation menu
+ * - Top navigation bar with user profile and dashboard link
+ * - Company/model selection dropdown
+ * - Settings section with Portal Stats and Change History
+ * - Responsive design for mobile and desktop
+ * 
+ * The sidebar includes:
+ * - Navigation items (Home, Models, etc.)
+ * - Company/model list with active state highlighting
+ * - Settings section (collapsible)
+ * - User profile menu in footer
+ * 
+ * @param children - React nodes to render in the main content area
+ * 
+ * @returns A layout component with sidebar, top bar, and content area
+ */
 export default function DashboardLayout({
   children,
 }: {
@@ -213,6 +228,27 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
+            {/* Configure Cascata Environment */}
+            <div className="px-2 py-2 border-b border-sidebar-border">
+              <SidebarMenu className="gap-0">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/configure-cascata"}
+                    onClick={() => setLocation("/configure-cascata")}
+                    tooltip="Configure Cascata Environment"
+                    className={`h-9 transition-all font-normal text-sm w-full justify-start gap-2 ${
+                      location === "/configure-cascata" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                    }`}
+                  >
+                    <Database
+                      className={`h-4 w-4 ${location === "/configure-cascata" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                    />
+                    <span className={location === "/configure-cascata" ? "font-medium" : ""}>Configure Cascata Environment</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
+
             {/* Create New Model Button */}
             <div className="px-2 py-2 border-b border-sidebar-border">
               <Button

@@ -6,6 +6,7 @@
  */
 
 import * as bigquery from './bigquery';
+import type { BigQueryConfig } from './bigquery';
 import * as db from './db';
 
 interface SyncResult {

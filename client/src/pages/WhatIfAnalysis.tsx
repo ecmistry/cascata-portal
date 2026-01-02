@@ -25,6 +25,12 @@ export default function WhatIfAnalysis() {
   const [, setLocation] = useLocation();
   const companyId = parseInt(params.id || "1");
 
+  // Fetch company data to ensure we have the right context
+  const { data: company } = trpc.company.get.useQuery(
+    { id: companyId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+
   // Adjustment states
   const [conversionMultiplier, setConversionMultiplier] = useState(1.0);
   const [acvNewAdjustment, setAcvNewAdjustment] = useState(0);

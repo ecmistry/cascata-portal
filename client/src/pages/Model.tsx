@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { ArrowLeft, TrendingUp, DollarSign, Target, Calculator, Download, Database, Sliders, FolderOpen, Home, LogOut } from "lucide-react";
 import { useLocation, useRoute } from "wouter";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getLoginUrl } from "@/const";
 import { toast } from "sonner";
@@ -19,7 +19,29 @@ import { ImportCSV } from "@/components/ImportCSV";
 import { exportToExcel, exportToPDF } from "@/lib/exportUtils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import DashboardLayout from "@/components/DashboardLayout";
+import type { Forecast } from "@/types/api";
 
+/**
+ * Model Page Component
+ * 
+ * Main page for viewing and managing a company's revenue forecasting model.
+ * Displays:
+ * - Cascade Sankey diagram showing SQL → Opportunity → Revenue flow
+ * - Historical SQL data with editing capabilities
+ * - Conversion rates configuration
+ * - Deal economics (ACV) settings
+ * - Forecast calculation and recalculation
+ * - Time-series charts and tables
+ * - Export functionality (Excel, PDF)
+ * 
+ * Features:
+ * - Real-time forecast calculation
+ * - What-If analysis capabilities
+ * - CSV import for historical data
+ * - Interactive data visualization
+ * 
+ * @returns A page component displaying the complete revenue forecasting model
+ */
 export default function Model() {
   const [, setLocation] = useLocation();
   const [, params] = useRoute("/model/:id");
@@ -28,40 +50,71 @@ export default function Model() {
   // Get company ID from URL parameter
   const companyId = params?.id ? parseInt(params.id) : 1;
 
-  // Fetch all data
+  // Note: React Query automatically refetches when query keys change (companyId is part of the key)
+  // The refetchOnMount: true option ensures fresh data is fetched even if cached data exists
+
+  // Fetch all data - refetch when companyId changes
   const { data: company, isLoading: companyLoading } = trpc.company.get.useQuery(
     { id: companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: regions = [], isLoading: regionsLoading } = trpc.region.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: sqlTypes = [], isLoading: sqlTypesLoading } = trpc.sqlType.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: sqlHistory = [], isLoading: sqlHistoryLoading } = trpc.sqlHistory.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: forecasts = [], isLoading: forecastsLoading } = trpc.forecast.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: conversionRates = [], isLoading: conversionRatesLoading } = trpc.conversionRate.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
   
   const { data: dealEconomics = [], isLoading: dealEconomicsLoading } = trpc.dealEconomics.list.useQuery(
     { companyId },
-    { enabled: isAuthenticated }
+    { 
+      enabled: isAuthenticated,
+      refetchOnMount: true,
+      refetchOnWindowFocus: false,
+    }
   );
 
   // Calculate forecast mutation
@@ -76,13 +129,22 @@ export default function Model() {
   });
 
   // Prepare chart data
+  interface QuarterData {
+    quarter: string;
+    year: number;
+    q: number;
+    totalSQLs: number;
+    totalOpps: number;
+    totalRevenue: number;
+  }
+
   const chartData = useMemo(() => {
     if (!forecasts.length || !regions.length || !sqlTypes.length) return [];
 
     // Group by quarter
-    const quarterMap = new Map<string, any>();
+    const quarterMap = new Map<string, QuarterData>();
 
-    forecasts.forEach((f: any) => {
+    forecasts.forEach((f: Forecast) => {
       const quarterKey = `Q${f.quarter} ${f.year}`;
       
       if (!quarterMap.has(quarterKey)) {
@@ -97,9 +159,11 @@ export default function Model() {
       }
 
       const entry = quarterMap.get(quarterKey);
-      entry.totalSQLs += f.predictedSqls || 0;
-      entry.totalOpps += (f.predictedOpps || 0) / 100; // Convert from stored format
-      entry.totalRevenue += ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100000; // Convert to thousands
+      if (entry) {
+        entry.totalSQLs += f.predictedSqls || 0;
+        entry.totalOpps += (f.predictedOpps || 0) / 100; // Convert from stored format
+        entry.totalRevenue += ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100000; // Convert to thousands
+      }
     });
 
     return Array.from(quarterMap.values())
@@ -110,14 +174,22 @@ export default function Model() {
   }, [forecasts, regions, sqlTypes]);
 
   // Calculate summary metrics
+  interface SqlHistoryRecord {
+    volume: number;
+  }
+
+  interface ConversionRateRecord {
+    oppCoverageRatio: number;
+  }
+
   const summary = useMemo(() => {
-    const totalSQLs = sqlHistory.reduce((sum: number, h: any) => sum + (h.volume || 0), 0);
+    const totalSQLs = sqlHistory.reduce((sum: number, h: SqlHistoryRecord) => sum + (h.volume || 0), 0);
     const totalForecasts = forecasts.length;
-    const totalRevenue = forecasts.reduce((sum: number, f: any) => 
+    const totalRevenue = forecasts.reduce((sum: number, f: Forecast) => 
       sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
     );
     const avgConversionRate = conversionRates.length > 0
-      ? conversionRates.reduce((sum: number, c: any) => sum + (c.oppCoverageRatio || 0), 0) / conversionRates.length / 100
+      ? conversionRates.reduce((sum: number, c: ConversionRateRecord) => sum + (c.oppCoverageRatio || 0), 0) / conversionRates.length / 100
       : 0;
 
     return {
@@ -158,7 +230,22 @@ export default function Model() {
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-2xl font-bold text-slate-900">{company?.name || "Loading..."}</h1>
-                  <p className="text-sm text-slate-600">{company?.description}</p>
+                  <p className="text-sm text-slate-600">
+                    {company?.description}
+                    {forecasts.length > 0 && (() => {
+                      const sorted = [...forecasts].sort((a: Forecast, b: Forecast) => {
+                        if (a.year !== b.year) return a.year - b.year;
+                        return a.quarter - b.quarter;
+                      });
+                      const first = sorted[0];
+                      const last = sorted[sorted.length - 1];
+                      return (
+                        <span className="ml-2 text-primary font-medium">
+                          ({`Q${first.quarter} ${first.year}`} - {`Q${last.quarter} ${last.year}`})
+                        </span>
+                      );
+                    })()}
+                  </p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -362,20 +449,31 @@ export default function Model() {
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
             {/* Sankey Diagram */}
-            {sqlHistory.length > 0 && conversionRates.length > 0 && (
-              <CascadeSankey
-                sqlVolume={sqlHistory.reduce((sum, h) => sum + h.volume, 0)}
-                opportunityVolume={forecasts.reduce((sum, f) => sum + f.predictedOpps, 0)}
-                revenueAmount={forecasts.reduce((sum, f) => sum + f.predictedRevenueNew + f.predictedRevenueUpsell, 0)}
-                conversionRate={conversionRates.length > 0 ? Math.round(conversionRates.reduce((sum, c) => sum + c.oppCoverageRatio, 0) / conversionRates.length) : 580}
-                winRate={conversionRates.length > 0 ? Math.round(conversionRates.reduce((sum, c) => sum + (c.winRateNew + c.winRateUpsell) / 2, 0) / conversionRates.length) : 5000}
-                timeDistribution={{
-                  sameQuarter: 8900,
-                  nextQuarter: 1000,
-                  twoQuartersLater: 100,
-                }}
-              />
-            )}
+            {sqlHistory.length > 0 && conversionRates.length > 0 && (() => {
+              // Calculate values once and use in both key and props
+              const totalSqlVolume = sqlHistory.reduce((sum, h) => sum + h.volume, 0);
+              const totalOpportunityVolume = forecasts.reduce((sum, f) => sum + (f.predictedOpps || 0) / 100, 0);
+              const totalRevenueAmount = forecasts.reduce((sum, f) => sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0);
+              
+              // Create a key that includes companyId and data values to force remount when data changes
+              const cascadeKey = `${companyId}-${totalSqlVolume}-${totalOpportunityVolume}-${totalRevenueAmount}`;
+              
+              return (
+                <CascadeSankey
+                  key={cascadeKey} // Force remount when company or data changes
+                  sqlVolume={totalSqlVolume}
+                  opportunityVolume={totalOpportunityVolume}
+                  revenueAmount={totalRevenueAmount}
+                  conversionRate={conversionRates.length > 0 ? Math.round(conversionRates.reduce((sum, c) => sum + c.oppCoverageRatio, 0) / conversionRates.length) : 580}
+                  winRate={conversionRates.length > 0 ? Math.round(conversionRates.reduce((sum, c) => sum + (c.winRateNew + c.winRateUpsell) / 2, 0) / conversionRates.length) : 5000}
+                  timeDistribution={{
+                    sameQuarter: 8900,
+                    nextQuarter: 1000,
+                    twoQuartersLater: 100,
+                  }}
+                />
+              );
+            })()}
 
           </TabsContent>
 

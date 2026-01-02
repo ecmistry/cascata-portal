@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useMemo, useEffect, useRef } from 'react';
 import ReactFlow, {
   Node,
   Edge,
@@ -6,6 +6,7 @@ import ReactFlow, {
   Controls,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   MarkerType,
   Position,
 } from 'reactflow';
@@ -25,6 +26,26 @@ interface CascadeSankeyProps {
   };
 }
 
+/**
+ * CascadeSankey Component
+ * 
+ * Displays an interactive Sankey diagram visualizing the revenue cascade flow:
+ * SQLs → Opportunities → Revenue (New Business + Upsell)
+ * 
+ * Uses ReactFlow to create an interactive flow diagram showing:
+ * - SQL volume as the starting point
+ * - Opportunity conversion with time distribution (same quarter, next quarter, two quarters later)
+ * - Revenue split between new business and upsell opportunities
+ * 
+ * @param sqlVolume - Total SQL (Sales Qualified Lead) volume
+ * @param opportunityVolume - Total opportunity volume
+ * @param revenueAmount - Total revenue amount in dollars
+ * @param conversionRate - SQL to Opportunity conversion rate (as percentage)
+ * @param winRate - Opportunity to Revenue win rate (as percentage)
+ * @param timeDistribution - Distribution of opportunities across time periods
+ * 
+ * @returns A card component containing an interactive ReactFlow Sankey diagram
+ */
 export function CascadeSankey({
   sqlVolume,
   opportunityVolume,
@@ -103,8 +124,61 @@ export function CascadeSankey({
     },
   ], []);
 
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const fitViewTriggered = useRef(false);
+  const prevPropsRef = useRef({ sqlVolume: 0, opportunityVolume: 0, revenueAmount: 0 });
+
+  // Update nodes when props change (e.g., when switching companies)
+  // Use ref to track previous values and force update when they actually change
+  useEffect(() => {
+    const propsChanged = 
+      prevPropsRef.current.sqlVolume !== sqlVolume ||
+      prevPropsRef.current.opportunityVolume !== opportunityVolume ||
+      prevPropsRef.current.revenueAmount !== revenueAmount;
+    
+    if (propsChanged) {
+      // Update ref with new values
+      prevPropsRef.current = { sqlVolume, opportunityVolume, revenueAmount };
+      
+      // Create completely new node objects with fresh data
+      const newNodes = initialNodes.map((node, index) => ({
+        ...node,
+        id: node.id,
+        data: {
+          ...node.data,
+          // Force new label by recreating it
+          label: node.data.label,
+        },
+      }));
+      
+      setNodes(newNodes);
+      fitViewTriggered.current = false; // Reset fitView trigger
+    }
+  }, [sqlVolume, opportunityVolume, revenueAmount, initialNodes, setNodes]);
+
+  // Update edges when they change (though they're static in this case)
+  useEffect(() => {
+    setEdges(initialEdges);
+  }, [initialEdges, setEdges]);
+
+  // Component to handle fitView after nodes are updated
+  function FitViewOnUpdate() {
+    const { fitView } = useReactFlow();
+    
+    useEffect(() => {
+      if (!fitViewTriggered.current && nodes.length > 0) {
+        // Small delay to ensure nodes are rendered
+        const timer = setTimeout(() => {
+          fitView({ padding: 0.1, duration: 300 });
+          fitViewTriggered.current = true;
+        }, 100);
+        return () => clearTimeout(timer);
+      }
+    }, [nodes, fitView]);
+    
+    return null;
+  }
 
   return (
     <Card>
@@ -123,9 +197,15 @@ export function CascadeSankey({
             onEdgesChange={onEdgesChange}
             fitView
             attributionPosition="bottom-left"
+            zoomOnScroll={false}
+            zoomOnPinch={false}
+            zoomOnDoubleClick={false}
+            minZoom={1}
+            maxZoom={1}
           >
             <Background />
-            <Controls />
+            <Controls showZoom={false} showFitView={true} showInteractive={false} />
+            <FitViewOnUpdate />
           </ReactFlow>
         </div>
         <div className="mt-4 flex justify-center gap-6 text-sm">

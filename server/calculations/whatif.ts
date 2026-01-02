@@ -65,12 +65,33 @@ export async function calculateWhatIfScenario(
   // Get baseline forecasts (current assumptions) - use db function which supports dev store
   const baselineForecastsRaw = await db.getForecastsByCompany(companyId);
   
-  // Transform baseline forecasts to match expected format for impact calculation
-  const baselineForecasts = baselineForecastsRaw.map(f => ({
-    year: f.year,
-    quarter: f.quarter,
-    revenue: (f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0),
-    opportunities: Math.round((f.predictedOpps || 0) / 100), // Convert from stored precision
+  // Group baseline forecasts by quarter and sum them (matching the adjusted forecast structure)
+  const baselineByQuarter = new Map<string, { year: number; quarter: number; revenue: number; opportunities: number }>();
+  
+  for (const f of baselineForecastsRaw) {
+    const key = `${f.year}-Q${f.quarter}`;
+    const existing = baselineByQuarter.get(key);
+    
+    if (existing) {
+      existing.revenue += (f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0);
+      existing.opportunities += Math.round((f.predictedOpps || 0) / 100);
+    } else {
+      baselineByQuarter.set(key, {
+        year: f.year,
+        quarter: f.quarter,
+        revenue: (f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0),
+        opportunities: Math.round((f.predictedOpps || 0) / 100),
+      });
+    }
+  }
+  
+  // Transform to array format matching adjusted forecasts
+  const baselineForecasts = Array.from(baselineByQuarter.values()).map(b => ({
+    quarter: `${b.year}-Q${b.quarter}`,
+    year: b.year,
+    quarterNum: b.quarter,
+    revenue: b.revenue,
+    opportunities: b.opportunities,
   }));
 
   // Apply adjustments to create adjusted scenario
@@ -296,7 +317,8 @@ function calculateImpact(baseline: any[], adjusted: any[]): any {
   // Create a map for easier lookup
   const baselineMap = new Map<string, any>();
   for (const b of baseline) {
-    const key = `${b.year}-Q${b.quarter}`;
+    // Use the quarter string directly if available, otherwise construct it
+    const key = b.quarter || `${b.year}-Q${b.quarterNum || b.quarter}`;
     baselineMap.set(key, b);
   }
 

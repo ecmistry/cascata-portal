@@ -375,11 +375,11 @@ export async function upsertSqlHistory(data: InsertSqlHistory) {
         h.sqlTypeId === data.sqlTypeId && h.year === data.year && h.quarter === data.quarter
       );
       if (existing) {
-        existing.volume = data.volume;
+        existing.volume = data.volume ?? 0;
         existing.updatedAt = new Date();
       } else {
         const id = devStore.nextHistoryId++;
-        const history = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        const history = { id, ...data, volume: data.volume ?? 0, createdAt: new Date(), updatedAt: new Date() };
         devStore.sqlHistory.set(id, history);
       }
       return;
@@ -424,13 +424,21 @@ export async function upsertConversionRate(data: InsertConversionRate) {
         cr.companyId === data.companyId && cr.regionId === data.regionId && cr.sqlTypeId === data.sqlTypeId
       );
       if (existing) {
-        existing.oppCoverageRatio = data.oppCoverageRatio;
-        existing.winRateNew = data.winRateNew;
-        existing.winRateUpsell = data.winRateUpsell;
+        existing.oppCoverageRatio = data.oppCoverageRatio ?? 500;
+        existing.winRateNew = data.winRateNew ?? 2500;
+        existing.winRateUpsell = data.winRateUpsell ?? 3000;
         existing.updatedAt = new Date();
       } else {
         const id = devStore.nextConversionRateId++;
-        const rate = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        const rate = {
+          id,
+          ...data,
+          oppCoverageRatio: data.oppCoverageRatio ?? 500,
+          winRateNew: data.winRateNew ?? 2500,
+          winRateUpsell: data.winRateUpsell ?? 3000,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
         devStore.conversionRates.set(id, rate);
       }
       return;
@@ -477,12 +485,19 @@ export async function upsertDealEconomics(data: InsertDealEconomics) {
         de.companyId === data.companyId && de.regionId === data.regionId
       );
       if (existing) {
-        existing.acvNew = data.acvNew;
-        existing.acvUpsell = data.acvUpsell;
+        existing.acvNew = data.acvNew ?? 100000;
+        existing.acvUpsell = data.acvUpsell ?? 50000;
         existing.updatedAt = new Date();
       } else {
         const id = devStore.nextDealEconomicsId++;
-        const economics = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        const economics = {
+          id,
+          ...data,
+          acvNew: data.acvNew ?? 100000,
+          acvUpsell: data.acvUpsell ?? 50000,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
         devStore.dealEconomics.set(id, economics);
       }
       return;
@@ -528,13 +543,21 @@ export async function upsertTimeDistribution(data: InsertTimeDistribution) {
         td.companyId === data.companyId && td.sqlTypeId === data.sqlTypeId
       );
       if (existing) {
-        existing.sameQuarterPct = data.sameQuarterPct;
-        existing.nextQuarterPct = data.nextQuarterPct;
-        existing.twoQuarterPct = data.twoQuarterPct;
+        existing.sameQuarterPct = data.sameQuarterPct ?? 8900;
+        existing.nextQuarterPct = data.nextQuarterPct ?? 1000;
+        existing.twoQuarterPct = data.twoQuarterPct ?? 100;
         existing.updatedAt = new Date();
       } else {
         const id = devStore.nextTimeDistributionId++;
-        const dist = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        const dist = {
+          id,
+          ...data,
+          sameQuarterPct: data.sameQuarterPct ?? 8900,
+          nextQuarterPct: data.nextQuarterPct ?? 1000,
+          twoQuarterPct: data.twoQuarterPct ?? 100,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
         devStore.timeDistributions.set(id, dist);
       }
       return;
@@ -582,14 +605,23 @@ export async function upsertForecast(data: InsertForecast) {
         f.sqlTypeId === data.sqlTypeId && f.year === data.year && f.quarter === data.quarter
       );
       if (existing) {
-        existing.predictedSqls = data.predictedSqls;
-        existing.predictedOpps = data.predictedOpps;
-        existing.predictedRevenueNew = data.predictedRevenueNew;
-        existing.predictedRevenueUpsell = data.predictedRevenueUpsell;
+        existing.predictedSqls = data.predictedSqls ?? 0;
+        existing.predictedOpps = data.predictedOpps ?? 0;
+        existing.predictedRevenueNew = data.predictedRevenueNew ?? 0;
+        existing.predictedRevenueUpsell = data.predictedRevenueUpsell ?? 0;
         existing.updatedAt = new Date();
       } else {
         const id = devStore.nextForecastId++;
-        const forecast = { id, ...data, createdAt: new Date(), updatedAt: new Date() };
+        const forecast = {
+          id,
+          ...data,
+          predictedSqls: data.predictedSqls ?? 0,
+          predictedOpps: data.predictedOpps ?? 0,
+          predictedRevenueNew: data.predictedRevenueNew ?? 0,
+          predictedRevenueUpsell: data.predictedRevenueUpsell ?? 0,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
         devStore.forecasts.set(id, forecast);
       }
       return;
@@ -620,7 +652,8 @@ export async function getForecastsByCompany(companyId: number) {
       return await db.select().from(forecasts).where(eq(forecasts.companyId, companyId));
     },
     () => {
-      return Array.from(devStore.forecasts.values()).filter(f => f.companyId === companyId);
+      const forecasts = Array.from(devStore.forecasts.values()).filter(f => f.companyId === companyId);
+      return forecasts;
     }
   );
 }
@@ -630,7 +663,7 @@ export async function deleteForecastsByCompany(companyId: number) {
   if (!db) {
     if (process.env.NODE_ENV === "development") {
       // Delete all forecasts for this company from dev store
-      for (const [id, forecast] of devStore.forecasts.entries()) {
+      for (const [id, forecast] of Array.from(devStore.forecasts.entries())) {
         if (forecast.companyId === companyId) {
           devStore.forecasts.delete(id);
         }

@@ -1,5 +1,6 @@
 import "dotenv/config";
 import express from "express";
+import cookieParser from "cookie-parser";
 import { createServer as createHttpServer } from "http";
 import { createServer as createHttpsServer } from "https";
 import { readFileSync } from "fs";
@@ -11,6 +12,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 import { loginRateLimiter, apiRateLimiter } from "./rateLimit";
+import { securityHeaders } from "./securityHeaders";
+import { csrfProtection } from "./csrf";
+import { requestId } from "./requestId";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -37,6 +41,15 @@ async function startServer() {
   // Trust proxy for HTTPS behind reverse proxy
   app.set("trust proxy", true);
   
+  // Security: Request ID tracking (must be first to track all requests)
+  app.use(requestId);
+  
+  // Security: Security headers (applied to all responses)
+  app.use(securityHeaders);
+  
+  // Cookie parser (needed for CSRF token and session cookies)
+  app.use(cookieParser());
+  
   // Redirect HTTP to HTTPS in production if HTTPS is enabled
   if (process.env.NODE_ENV === "production" && process.env.ENABLE_HTTPS === "true") {
     app.use((req, res, next) => {
@@ -50,6 +63,9 @@ async function startServer() {
   // Configure body parser with reasonable size limit (reduced from 50mb)
   app.use(express.json({ limit: "10mb" }));
   app.use(express.urlencoded({ limit: "10mb", extended: true }));
+  
+  // Security: CSRF protection (applied to state-changing operations)
+  app.use(csrfProtection);
   
   // Rate limiting - apply to all API routes
   app.use("/api/trpc", apiRateLimiter);

@@ -1,0 +1,2463 @@
+{
+  "allRates": [
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 0,
+        "nextQuarter": 1.8,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.65,
+      "oppCoverageRatio": 6500,
+      "opportunities": {
+        "sameQuarter": 10.41529412,
+        "nextQuarter": 1.17,
+        "twoQuartersLater": 0.117
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.48,
+      "oppCoverageRatio": 4800,
+      "opportunities": {
+        "sameQuarter": 7.691294118,
+        "nextQuarter": 0.864,
+        "twoQuartersLater": 0.0864
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.55,
+      "oppCoverageRatio": 5500,
+      "opportunities": {
+        "sameQuarter": 8.812941176,
+        "nextQuarter": 0.99,
+        "twoQuartersLater": 0.099
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.48,
+      "oppCoverageRatio": 4800,
+      "opportunities": {
+        "sameQuarter": 7.691294118,
+        "nextQuarter": 0.864,
+        "twoQuartersLater": 0.0864
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.6,
+      "oppCoverageRatio": 6000,
+      "opportunities": {
+        "sameQuarter": 9.614117647,
+        "nextQuarter": 1.08,
+        "twoQuartersLater": 0.108
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.56,
+      "oppCoverageRatio": 5600,
+      "opportunities": {
+        "sameQuarter": 8.973176471,
+        "nextQuarter": 1.008,
+        "twoQuartersLater": 0.1008
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.53,
+      "oppCoverageRatio": 5300,
+      "opportunities": {
+        "sameQuarter": 8.492470588,
+        "nextQuarter": 0.954,
+        "twoQuartersLater": 0.0954
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 0,
+        "nextQuarter": 1.8,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.46,
+      "oppCoverageRatio": 4600,
+      "opportunities": {
+        "sameQuarter": 7.370823529,
+        "nextQuarter": 0.828,
+        "twoQuartersLater": 0.0828
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.65,
+      "oppCoverageRatio": 6500,
+      "opportunities": {
+        "sameQuarter": 10.41529412,
+        "nextQuarter": 1.17,
+        "twoQuartersLater": 0.117
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.48,
+      "oppCoverageRatio": 4800,
+      "opportunities": {
+        "sameQuarter": 7.691294118,
+        "nextQuarter": 0.864,
+        "twoQuartersLater": 0.0864
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.55,
+      "oppCoverageRatio": 5500,
+      "opportunities": {
+        "sameQuarter": 8.812941176,
+        "nextQuarter": 0.99,
+        "twoQuartersLater": 0.099
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.48,
+      "oppCoverageRatio": 4800,
+      "opportunities": {
+        "sameQuarter": 7.691294118,
+        "nextQuarter": 0.864,
+        "twoQuartersLater": 0.0864
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.6,
+      "oppCoverageRatio": 6000,
+      "opportunities": {
+        "sameQuarter": 9.614117647,
+        "nextQuarter": 1.08,
+        "twoQuartersLater": 0.108
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 18,
+      "conversionRate": 0.56,
+      "oppCoverageRatio": 5600,
+      "opportunities": {
+        "sameQuarter": 8.973176471,
+        "nextQuarter": 1.008,
+        "twoQuartersLater": 0.1008
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 18,
+      "conversionRate": 0.53,
+      "oppCoverageRatio": 5300,
+      "opportunities": {
+        "sameQuarter": 8.492470588,
+        "nextQuarter": 0.954,
+        "twoQuartersLater": 0.0954
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 18,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 18,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 24,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 10.68,
+        "nextQuarter": 1.2,
+        "twoQuartersLater": 0.12
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 1,
+      "sqls": 24,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 0,
+        "nextQuarter": 2.4,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 2,
+      "sqls": 24,
+      "conversionRate": 0.44,
+      "oppCoverageRatio": 4400,
+      "opportunities": {
+        "sameQuarter": 9.400470588,
+        "nextQuarter": 1.056,
+        "twoQuartersLater": 0.1056
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 3,
+      "sqls": 24,
+      "conversionRate": 0.44,
+      "oppCoverageRatio": 4400,
+      "opportunities": {
+        "sameQuarter": 9.400470588,
+        "nextQuarter": 1.056,
+        "twoQuartersLater": 0.1056
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2022,
+      "quarter": 4,
+      "sqls": 24,
+      "conversionRate": 0.44,
+      "oppCoverageRatio": 4400,
+      "opportunities": {
+        "sameQuarter": 9.400470588,
+        "nextQuarter": 1.056,
+        "twoQuartersLater": 0.1056
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 24,
+      "conversionRate": 0.625,
+      "oppCoverageRatio": 6250,
+      "opportunities": {
+        "sameQuarter": 13.35294118,
+        "nextQuarter": 1.5,
+        "twoQuartersLater": 0.15
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 24,
+      "conversionRate": 0.44,
+      "oppCoverageRatio": 4400,
+      "opportunities": {
+        "sameQuarter": 9.400470588,
+        "nextQuarter": 1.056,
+        "twoQuartersLater": 0.1056
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 24,
+      "conversionRate": 0.48,
+      "oppCoverageRatio": 4800,
+      "opportunities": {
+        "sameQuarter": 10.25505882,
+        "nextQuarter": 1.152,
+        "twoQuartersLater": 0.1152
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 24,
+      "conversionRate": 0.38,
+      "oppCoverageRatio": 3800,
+      "opportunities": {
+        "sameQuarter": 8.118588235,
+        "nextQuarter": 0.912,
+        "twoQuartersLater": 0.0912
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 24,
+      "conversionRate": 0.35,
+      "oppCoverageRatio": 3500,
+      "opportunities": {
+        "sameQuarter": 7.477647059,
+        "nextQuarter": 0.84,
+        "twoQuartersLater": 0.084
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 24,
+      "conversionRate": 0.32,
+      "oppCoverageRatio": 3200,
+      "opportunities": {
+        "sameQuarter": 6.836705882,
+        "nextQuarter": 0.768,
+        "twoQuartersLater": 0.0768
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 24,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 10.68235294,
+        "nextQuarter": 1.2,
+        "twoQuartersLater": 0.12
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 24,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 10.68,
+        "nextQuarter": 1.2,
+        "twoQuartersLater": 0.12
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 24,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 10.68,
+        "nextQuarter": 1.2,
+        "twoQuartersLater": 0.12
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "INBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 31,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 13.795,
+        "nextQuarter": 1.55,
+        "twoQuartersLater": 0.155
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 26,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 3.471,
+        "nextQuarter": 0.39,
+        "twoQuartersLater": 0.039
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 26,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 3.471,
+        "nextQuarter": 0.39,
+        "twoQuartersLater": 0.039
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2025,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2026,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2027,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 1,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 3,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "EVENT",
+      "year": 2028,
+      "quarter": 4,
+      "sqls": 15,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 2.0025,
+        "nextQuarter": 0,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6676470588,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 7,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.9345,
+        "nextQuarter": 0.105,
+        "twoQuartersLater": 0.0105
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 12,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.602,
+        "nextQuarter": 0.18,
+        "twoQuartersLater": 0.018
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.6675,
+        "nextQuarter": 0.075,
+        "twoQuartersLater": 0.0075
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.5341176471,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.5341176471,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.5341176471,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.534,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.534,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 1,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.1335,
+        "nextQuarter": 0.015,
+        "twoQuartersLater": 0.0015
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 4,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 0.534,
+        "nextQuarter": 0.06,
+        "twoQuartersLater": 0.006
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335294118,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335294118,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "OUTBOUND",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 10,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.335,
+        "nextQuarter": 0.15,
+        "twoQuartersLater": 0.015
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 23,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 3.0705,
+        "nextQuarter": 0.345,
+        "twoQuartersLater": 0.0345
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "OUTBOUND",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 9,
+      "conversionRate": 0.15,
+      "oppCoverageRatio": 1500,
+      "opportunities": {
+        "sameQuarter": 1.2015,
+        "nextQuarter": 0.135,
+        "twoQuartersLater": 0.0135
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 5,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 2.002941176,
+        "nextQuarter": 0.225,
+        "twoQuartersLater": 0.0225
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 10,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 4.450980392,
+        "nextQuarter": 0.5,
+        "twoQuartersLater": 0.05
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 25,
+      "conversionRate": 0.5,
+      "oppCoverageRatio": 5000,
+      "opportunities": {
+        "sameQuarter": 11.12745098,
+        "nextQuarter": 1.25,
+        "twoQuartersLater": 0.125
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 25,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 10.01470588,
+        "nextQuarter": 1.125,
+        "twoQuartersLater": 0.1125
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 25,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 10.0125,
+        "nextQuarter": 1.125,
+        "twoQuartersLater": 0.1125
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 23,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 9.2115,
+        "nextQuarter": 1.035,
+        "twoQuartersLater": 0.1035
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 40,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.02,
+        "nextQuarter": 1.8,
+        "twoQuartersLater": 0.18
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 31.5,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 12.61575,
+        "nextQuarter": 1.4175,
+        "twoQuartersLater": 0.14175
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 4,
+      "sqls": 40.95,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.400475,
+        "nextQuarter": 1.84275,
+        "twoQuartersLater": 0.184275
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 1,
+      "sqls": 40.95,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.40408824,
+        "nextQuarter": 1.84275,
+        "twoQuartersLater": 0.184275
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 2,
+      "sqls": 47.25,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 18.92779412,
+        "nextQuarter": 2.12625,
+        "twoQuartersLater": 0.212625
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 3,
+      "sqls": 47.25,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 18.92779412,
+        "nextQuarter": 2.12625,
+        "twoQuartersLater": 0.212625
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 4,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.4515,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 1,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.4515,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 2,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.4515,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 3,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.4515,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 4,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.446775,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 1,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.446775,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 2,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.446775,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0.240975
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 3,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.446775,
+        "nextQuarter": 2.40975,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_NORTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 4,
+      "sqls": 53.55,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 21.446775,
+        "nextQuarter": 0,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 12,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 4.807058824,
+        "nextQuarter": 0.54,
+        "twoQuartersLater": 0.054
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 15,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 6.008823529,
+        "nextQuarter": 0.675,
+        "twoQuartersLater": 0.0675
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 19,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 7.611176471,
+        "nextQuarter": 0.855,
+        "twoQuartersLater": 0.0855
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 19,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 7.6095,
+        "nextQuarter": 0.855,
+        "twoQuartersLater": 0.0855
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 19,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 7.6095,
+        "nextQuarter": 0.855,
+        "twoQuartersLater": 0.0855
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 21,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 8.4105,
+        "nextQuarter": 0.945,
+        "twoQuartersLater": 0.0945
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 20,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 8.01,
+        "nextQuarter": 0.9,
+        "twoQuartersLater": 0.09
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 4,
+      "sqls": 26,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 10.413,
+        "nextQuarter": 1.17,
+        "twoQuartersLater": 0.117
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 1,
+      "sqls": 26,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 10.41529412,
+        "nextQuarter": 1.17,
+        "twoQuartersLater": 0.117
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 2,
+      "sqls": 30,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 12.01764706,
+        "nextQuarter": 1.35,
+        "twoQuartersLater": 0.135
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 3,
+      "sqls": 30,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 12.01764706,
+        "nextQuarter": 1.35,
+        "twoQuartersLater": 0.135
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 4,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.62,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 1,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.62,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 2,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.62,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 3,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.62,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 4,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.617,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 1,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.617,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 2,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.617,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0.153
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 3,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.617,
+        "nextQuarter": 1.53,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "EMESA_SOUTH",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 4,
+      "sqls": 34,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 13.617,
+        "nextQuarter": 0,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 1,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 2,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 3,
+      "sqls": 5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 1.780392157,
+        "nextQuarter": 0.2,
+        "twoQuartersLater": 0.02
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2023,
+      "quarter": 4,
+      "sqls": 10,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 3.560784314,
+        "nextQuarter": 0.4,
+        "twoQuartersLater": 0.04
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 1,
+      "sqls": 10,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 3.560784314,
+        "nextQuarter": 0.4,
+        "twoQuartersLater": 0.04
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 2,
+      "sqls": 10,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 3.560784314,
+        "nextQuarter": 0.4,
+        "twoQuartersLater": 0.04
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 3,
+      "sqls": 10,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 3.560784314,
+        "nextQuarter": 0.4,
+        "twoQuartersLater": 0.04
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2024,
+      "quarter": 4,
+      "sqls": 20,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 7.12,
+        "nextQuarter": 0.8,
+        "twoQuartersLater": 0.08
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 1,
+      "sqls": 26,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 9.256,
+        "nextQuarter": 1.04,
+        "twoQuartersLater": 0.104
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 2,
+      "sqls": 23,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 8.188,
+        "nextQuarter": 0.92,
+        "twoQuartersLater": 0.092
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 3,
+      "sqls": 24.5,
+      "conversionRate": 0.4,
+      "oppCoverageRatio": 4000,
+      "opportunities": {
+        "sameQuarter": 8.722,
+        "nextQuarter": 0.98,
+        "twoQuartersLater": 0.098
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2025,
+      "quarter": 4,
+      "sqls": 31.85,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 12.755925,
+        "nextQuarter": 1.43325,
+        "twoQuartersLater": 0.143325
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 1,
+      "sqls": 31.85,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 12.75873529,
+        "nextQuarter": 1.43325,
+        "twoQuartersLater": 0.143325
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 2,
+      "sqls": 36.75,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 14.72161765,
+        "nextQuarter": 1.65375,
+        "twoQuartersLater": 0.165375
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 3,
+      "sqls": 36.75,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 14.72161765,
+        "nextQuarter": 1.65375,
+        "twoQuartersLater": 0.165375
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2026,
+      "quarter": 4,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.6845,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 1,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.6845,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 2,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.6845,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 3,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.6845,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2027,
+      "quarter": 4,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.680825,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 1,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.680825,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 2,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.680825,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0.187425
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 3,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.680825,
+        "nextQuarter": 1.87425,
+        "twoQuartersLater": 0
+      }
+    },
+    {
+      "region": "NORAM",
+      "sqlType": "ILO",
+      "year": 2028,
+      "quarter": 4,
+      "sqls": 41.65,
+      "conversionRate": 0.45,
+      "oppCoverageRatio": 4500,
+      "opportunities": {
+        "sameQuarter": 16.680825,
+        "nextQuarter": 0,
+        "twoQuartersLater": 0
+      }
+    }
+  ],
+  "summary": {
+    "EMESA_NORTH_INBOUND": {
+      "count": 14,
+      "avgConversionRate": 0.5128571428571429,
+      "avgOppCoverageRatio": 5129,
+      "minConversionRate": 0.45,
+      "maxConversionRate": 0.65
+    },
+    "EMESA_SOUTH_INBOUND": {
+      "count": 14,
+      "avgConversionRate": 0.5128571428571429,
+      "avgOppCoverageRatio": 5129,
+      "minConversionRate": 0.45,
+      "maxConversionRate": 0.65
+    },
+    "NORAM_INBOUND": {
+      "count": 14,
+      "avgConversionRate": 0.4546428571428572,
+      "avgOppCoverageRatio": 4546,
+      "minConversionRate": 0.32,
+      "maxConversionRate": 0.625
+    },
+    "_EVENT": {
+      "count": 17,
+      "avgConversionRate": 0.14999999999999997,
+      "avgOppCoverageRatio": 1500,
+      "minConversionRate": 0.15,
+      "maxConversionRate": 0.15
+    },
+    "NORAM_EVENT": {
+      "count": 17,
+      "avgConversionRate": 0.14999999999999997,
+      "avgOppCoverageRatio": 1500,
+      "minConversionRate": 0.15,
+      "maxConversionRate": 0.15
+    },
+    "EMESA_NORTH_OUTBOUND": {
+      "count": 10,
+      "avgConversionRate": 0.14999999999999997,
+      "avgOppCoverageRatio": 1500,
+      "minConversionRate": 0.15,
+      "maxConversionRate": 0.15
+    },
+    "EMESA_SOUTH_OUTBOUND": {
+      "count": 7,
+      "avgConversionRate": 0.15,
+      "avgOppCoverageRatio": 1500,
+      "minConversionRate": 0.15,
+      "maxConversionRate": 0.15
+    },
+    "NORAM_OUTBOUND": {
+      "count": 5,
+      "avgConversionRate": 0.15,
+      "avgOppCoverageRatio": 1500,
+      "minConversionRate": 0.15,
+      "maxConversionRate": 0.15
+    },
+    "EMESA_NORTH_ILO": {
+      "count": 24,
+      "avgConversionRate": 0.4479166666666666,
+      "avgOppCoverageRatio": 4479,
+      "minConversionRate": 0.4,
+      "maxConversionRate": 0.5
+    },
+    "EMESA_SOUTH_ILO": {
+      "count": 24,
+      "avgConversionRate": 0.4416666666666666,
+      "avgOppCoverageRatio": 4417,
+      "minConversionRate": 0.4,
+      "maxConversionRate": 0.45
+    },
+    "NORAM_ILO": {
+      "count": 24,
+      "avgConversionRate": 0.4270833333333332,
+      "avgOppCoverageRatio": 4271,
+      "minConversionRate": 0.4,
+      "maxConversionRate": 0.45
+    }
+  }
+}

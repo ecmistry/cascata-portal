@@ -17,9 +17,18 @@ export default function Performance() {
 
   const companyId = params?.id ? parseInt(params.id) : 0;
 
-  const { data: company } = trpc.company.get.useQuery({ id: companyId });
-  const { data: forecasts = [] } = trpc.forecast.list.useQuery({ companyId });
-  const { data: actuals = [] } = trpc.actual.list.useQuery({ companyId });
+  const { data: company } = trpc.company.get.useQuery(
+    { id: companyId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+  const { data: forecasts = [] } = trpc.forecast.list.useQuery(
+    { companyId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
+  const { data: actuals = [] } = trpc.actual.list.useQuery(
+    { companyId },
+    { refetchOnMount: true, refetchOnWindowFocus: false }
+  );
 
   // Calculate variance metrics - must be before any early returns
   const varianceData = useMemo(() => {

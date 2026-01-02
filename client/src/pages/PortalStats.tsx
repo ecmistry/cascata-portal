@@ -1,15 +1,32 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { skipToken } from "@tanstack/react-query";
 import { Activity, Database, Users, TrendingUp, Clock, Server, Zap } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import type { Forecast } from "@/types/api";
 
+/**
+ * PortalStats Page Component
+ * 
+ * Displays portal-wide performance statistics and system information.
+ * Shows:
+ * - Total models, forecasts, and active users
+ * - Data coverage metrics (regions, SQL types, total SQLs)
+ * - Revenue overview across all companies
+ * - System information (environment, version, last updated)
+ * 
+ * This page provides administrators with insights into portal usage
+ * and overall system health.
+ * 
+ * @returns A page component displaying portal statistics and system information
+ */
 export default function PortalStats() {
   const { data: companies = [] } = trpc.company.list.useQuery();
-  const { data: allForecasts = [] } = trpc.forecast.list.useQuery(undefined, {
-    enabled: companies.length > 0,
-  });
+  const firstCompanyId = companies[0]?.id;
+  const { data: allForecasts = [] } = trpc.forecast.list.useQuery(
+    firstCompanyId ? { companyId: firstCompanyId } : skipToken
+  );
 
   const stats = useMemo(() => {
     const totalModels = companies.length;

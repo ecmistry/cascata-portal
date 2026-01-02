@@ -6,12 +6,33 @@ import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
 import { Plus, TrendingUp, TrendingDown, DollarSign, Target, Zap, BarChart3, Filter, Home } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { ConversionFunnel } from "@/components/ConversionFunnel";
 import DashboardLayout from "@/components/DashboardLayout";
+import type { Forecast, Region, SqlType, SqlHistory, ConversionRate } from "@/types/api";
 
+/**
+ * Dashboard Page Component
+ * 
+ * Main dashboard providing an overview of all companies and their forecasting metrics.
+ * Displays:
+ * - Overview KPIs (SQLs, Opportunities, Revenue, Conversion Rate, Deal Size)
+ * - Revenue trends and comparisons
+ * - Regional performance breakdown
+ * - Conversion funnel visualization
+ * - Time-series charts for SQLs, Opportunities, and Revenue
+ * - Filtering by company, region, and SQL type
+ * 
+ * Features:
+ * - Multi-company aggregation
+ * - Real-time data updates
+ * - Interactive filtering and drill-down
+ * - Visual trend analysis
+ * 
+ * @returns A dashboard page component with comprehensive metrics and visualizations
+ */
 export default function Dashboard() {
   const { user, isAuthenticated, loading } = useAuth();
   const [, setLocation] = useLocation();
@@ -23,57 +44,140 @@ export default function Dashboard() {
   const [selectedCompany, setSelectedCompany] = useState<number | "all">("all");
   const [selectedRegion, setSelectedRegion] = useState<string>("all");
   const [selectedSqlType, setSelectedSqlType] = useState<string>("all");
+  const [selectedYear, setSelectedYear] = useState<number | "all">("all");
+  const [selectedQuarter, setSelectedQuarter] = useState<number | "all">("all");
 
-  // Fetch data for analytics
-  const { data: allForecasts = [] } = trpc.forecast.list.useQuery(
-    { companyId: selectedCompany === "all" ? (companies[0]?.id || 1) : selectedCompany },
-    { enabled: isAuthenticated && companies.length > 0 }
-  );
+  // When "all" is selected, fetch data for all companies and aggregate
+  // When a specific company is selected, fetch only that company's data
+  const companyIdsToFetch = selectedCompany === "all" 
+    ? companies.map(c => c.id)
+    : [selectedCompany];
 
-  const { data: allRegions = [] } = trpc.region.list.useQuery(
-    { companyId: selectedCompany === "all" ? (companies[0]?.id || 1) : selectedCompany },
-    { enabled: isAuthenticated && companies.length > 0 }
-  );
+  const utils = trpc.useUtils();
 
-  const { data: allSqlTypes = [] } = trpc.sqlType.list.useQuery(
-    { companyId: selectedCompany === "all" ? (companies[0]?.id || 1) : selectedCompany },
-    { enabled: isAuthenticated && companies.length > 0 }
-  );
+  // Fetch data for all companies when "all" is selected
+  // Use Promise.all to fetch all companies' data in parallel
+  const [aggregatedData, setAggregatedData] = useState<{
+    forecasts: Forecast[];
+    regions: Region[];
+    sqlTypes: SqlType[];
+    sqlHistory: SqlHistory[];
+    conversionRates: ConversionRate[];
+  }>({
+    forecasts: [],
+    regions: [],
+    sqlTypes: [],
+    sqlHistory: [],
+    conversionRates: [],
+  });
 
-  const { data: sqlHistory = [] } = trpc.sqlHistory.list.useQuery(
-    { companyId: selectedCompany === "all" ? (companies[0]?.id || 1) : selectedCompany },
-    { enabled: isAuthenticated && companies.length > 0 }
-  );
+  useEffect(() => {
+    if (!isAuthenticated || companies.length === 0) return;
 
-  const { data: conversionRates = [] } = trpc.conversionRate.list.useQuery(
-    { companyId: selectedCompany === "all" ? (companies[0]?.id || 1) : selectedCompany },
-    { enabled: isAuthenticated && companies.length > 0 }
-  );
+    const fetchAllData = async () => {
+      const results = await Promise.all(
+        companyIdsToFetch.map(async (companyId) => {
+          const [forecasts, regions, sqlTypes, sqlHistory, conversionRates] = await Promise.all([
+            utils.forecast.list.fetch({ companyId }),
+            utils.region.list.fetch({ companyId }),
+            utils.sqlType.list.fetch({ companyId }),
+            utils.sqlHistory.list.fetch({ companyId }),
+            utils.conversionRate.list.fetch({ companyId }),
+          ]);
+          return { forecasts, regions, sqlTypes, sqlHistory, conversionRates };
+        })
+      );
+
+      // Aggregate all data
+      const allForecasts = results.flatMap(r => r.forecasts);
+      
+      // Deduplicate regions and SQL types by name
+      const regionMap = new Map<string, Region>();
+      results.forEach(r => {
+        r.regions.forEach((region: Region) => {
+          if (!regionMap.has(region.name)) {
+            regionMap.set(region.name, region);
+          }
+        });
+      });
+
+      const sqlTypeMap = new Map<string, SqlType>();
+      results.forEach(r => {
+        r.sqlTypes.forEach((sqlType: SqlType) => {
+          if (!sqlTypeMap.has(sqlType.name)) {
+            sqlTypeMap.set(sqlType.name, sqlType);
+          }
+        });
+      });
+
+      setAggregatedData({
+        forecasts: allForecasts,
+        regions: Array.from(regionMap.values()),
+        sqlTypes: Array.from(sqlTypeMap.values()),
+        sqlHistory: results.flatMap(r => r.sqlHistory),
+        conversionRates: results.flatMap(r => r.conversionRates),
+      });
+    };
+
+    fetchAllData();
+  }, [companyIdsToFetch.join(','), isAuthenticated, companies.length, utils]);
+
+  const allForecasts = aggregatedData.forecasts;
+  const allRegions = aggregatedData.regions;
+  const allSqlTypes = aggregatedData.sqlTypes;
+  const sqlHistory = aggregatedData.sqlHistory;
+  const conversionRates = aggregatedData.conversionRates;
+
+  // Get available years and quarters from forecasts
+  const availableYears = useMemo(() => {
+    const years = new Set(allForecasts.map((f: Forecast) => f.year));
+    return Array.from(years).sort((a, b) => b - a);
+  }, [allForecasts]);
+
+  const availableQuarters = useMemo(() => {
+    const quarters = new Set(allForecasts.map((f: Forecast) => f.quarter));
+    return Array.from(quarters).sort((a, b) => a - b);
+  }, [allForecasts]);
+
+  // Get time range of data
+  const timeRange = useMemo(() => {
+    if (allForecasts.length === 0) return null;
+    const sorted = [...allForecasts].sort((a: Forecast, b: Forecast) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.quarter - b.quarter;
+    });
+    const first = sorted[0];
+    const last = sorted[sorted.length - 1];
+    return {
+      start: `Q${first.quarter} ${first.year}`,
+      end: `Q${last.quarter} ${last.year}`,
+    };
+  }, [allForecasts]);
 
   // Calculate overview KPIs
   const kpis = useMemo(() => {
-    let forecasts = allForecasts;
+    let forecasts: Forecast[] = allForecasts;
     
     // Apply filters
     if (selectedRegion !== "all") {
-      const regionId = allRegions.find((r: any) => r.name === selectedRegion)?.id;
-      forecasts = forecasts.filter((f: any) => f.regionId === regionId);
+      const regionId = allRegions.find((r: Region) => r.name === selectedRegion)?.id;
+      forecasts = forecasts.filter((f: Forecast) => f.regionId === regionId);
     }
     if (selectedSqlType !== "all") {
-      const sqlTypeId = allSqlTypes.find((s: any) => s.name === selectedSqlType)?.id;
-      forecasts = forecasts.filter((f: any) => f.sqlTypeId === sqlTypeId);
+      const sqlTypeId = allSqlTypes.find((s: SqlType) => s.name === selectedSqlType)?.id;
+      forecasts = forecasts.filter((f: Forecast) => f.sqlTypeId === sqlTypeId);
     }
 
-    const totalSQLs = forecasts.reduce((sum: number, f: any) => sum + (f.predictedSqls || 0), 0);
-    const totalOpps = forecasts.reduce((sum: number, f: any) => sum + (f.predictedOpps || 0), 0) / 100;
-    const totalRevenue = forecasts.reduce((sum: number, f: any) => 
+    const totalSQLs = forecasts.reduce((sum: number, f: Forecast) => sum + (f.predictedSqls || 0), 0);
+    const totalOpps = forecasts.reduce((sum: number, f: Forecast) => sum + (f.predictedOpps || 0), 0) / 100;
+    const totalRevenue = forecasts.reduce((sum: number, f: Forecast) => 
       sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
     );
     const avgConversionRate = totalSQLs > 0 ? (totalOpps / totalSQLs) * 100 : 0;
     const avgDealSize = totalOpps > 0 ? totalRevenue / totalOpps : 0;
 
     // Calculate trends (compare last 2 quarters)
-    const sortedForecasts = [...forecasts].sort((a: any, b: any) => {
+    const sortedForecasts = [...forecasts].sort((a: Forecast, b: Forecast) => {
       if (a.year !== b.year) return b.year - a.year;
       return b.quarter - a.quarter;
     });
@@ -81,10 +185,10 @@ export default function Dashboard() {
     const lastQuarter = sortedForecasts.slice(0, Math.floor(sortedForecasts.length / 4));
     const prevQuarter = sortedForecasts.slice(Math.floor(sortedForecasts.length / 4), Math.floor(sortedForecasts.length / 2));
 
-    const lastQuarterRevenue = lastQuarter.reduce((sum: number, f: any) => 
+    const lastQuarterRevenue = lastQuarter.reduce((sum: number, f: Forecast) => 
       sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
     );
-    const prevQuarterRevenue = prevQuarter.reduce((sum: number, f: any) => 
+    const prevQuarterRevenue = prevQuarter.reduce((sum: number, f: Forecast) => 
       sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
     );
 
@@ -100,16 +204,63 @@ export default function Dashboard() {
       avgDealSize,
       revenueTrend,
     };
+  }, [allForecasts, selectedRegion, selectedSqlType, selectedYear, selectedQuarter, allRegions, allSqlTypes]);
+
+  // Time-series data for charts
+  const timeSeriesData = useMemo(() => {
+    let forecasts: Forecast[] = allForecasts;
+    
+    // Apply filters (except time filters for time series)
+    if (selectedRegion !== "all") {
+      const regionId = allRegions.find((r: Region) => r.name === selectedRegion)?.id;
+      forecasts = forecasts.filter((f: Forecast) => f.regionId === regionId);
+    }
+    if (selectedSqlType !== "all") {
+      const sqlTypeId = allSqlTypes.find((s: SqlType) => s.name === selectedSqlType)?.id;
+      forecasts = forecasts.filter((f: Forecast) => f.sqlTypeId === sqlTypeId);
+    }
+
+    // Group by quarter
+    const quarterMap = new Map<string, {
+      period: string;
+      year: number;
+      quarter: number;
+      sqls: number;
+      opps: number;
+      revenue: number;
+    }>();
+
+    forecasts.forEach((f: Forecast) => {
+      const key = `${f.year}-Q${f.quarter}`;
+      const existing = quarterMap.get(key) || {
+        period: `Q${f.quarter} ${f.year}`,
+        year: f.year,
+        quarter: f.quarter,
+        sqls: 0,
+        opps: 0,
+        revenue: 0,
+      };
+      existing.sqls += f.predictedSqls || 0;
+      existing.opps += (f.predictedOpps || 0) / 100;
+      existing.revenue += ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100;
+      quarterMap.set(key, existing);
+    });
+
+    return Array.from(quarterMap.values())
+      .sort((a, b) => {
+        if (a.year !== b.year) return a.year - b.year;
+        return a.quarter - b.quarter;
+      });
   }, [allForecasts, selectedRegion, selectedSqlType, allRegions, allSqlTypes]);
 
   // Regional performance data
   const regionalData = useMemo(() => {
-    return allRegions.map((region: any) => {
-      const regionForecasts = allForecasts.filter((f: any) => f.regionId === region.id);
-      const revenue = regionForecasts.reduce((sum: number, f: any) => 
+    return allRegions.map((region: Region) => {
+      const regionForecasts = allForecasts.filter((f: Forecast) => f.regionId === region.id);
+      const revenue = regionForecasts.reduce((sum: number, f: Forecast) => 
         sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
       );
-      const sqls = regionForecasts.reduce((sum: number, f: any) => sum + (f.predictedSqls || 0), 0);
+      const sqls = regionForecasts.reduce((sum: number, f: Forecast) => sum + (f.predictedSqls || 0), 0);
       
       return {
         name: region.name,
@@ -139,16 +290,21 @@ export default function Dashboard() {
       sum + ((f.predictedRevenueNew || 0) + (f.predictedRevenueUpsell || 0)) / 100, 0
     );
 
+    // Calculate percentages relative to SQLs (baseline)
+    // Revenue percentage doesn't make sense (dollars vs count), so we'll show revenue per SQL instead
+    const revenuePerSQL = totalSQLs > 0 ? totalRevenue / totalSQLs : 0;
+    
     return [
       { name: 'SQLs', value: totalSQLs, percentage: 100, color: '#3b82f6' },
       { name: 'Opportunities', value: totalOpps, percentage: totalSQLs > 0 ? (totalOpps / totalSQLs) * 100 : 0, color: '#8b5cf6' },
-      { name: 'Revenue', value: totalRevenue, percentage: totalSQLs > 0 ? (totalRevenue / totalSQLs) * 100 : 0, color: '#10b981' },
+      { name: 'Revenue', value: totalRevenue, percentage: 0, revenuePerSQL: revenuePerSQL, color: '#10b981' },
     ];
-  }, [allForecasts, selectedRegion, selectedSqlType, allRegions, allSqlTypes]);
+  }, [allForecasts, selectedRegion, selectedSqlType, selectedYear, selectedQuarter, allRegions, allSqlTypes]);
 
   // SQL type effectiveness data
   const sqlTypeData = useMemo(() => {
-    return allSqlTypes.map((sqlType: any) => {
+    // Map all SQL types and calculate their revenue contribution
+    const data = allSqlTypes.map((sqlType: any) => {
       const typeForecasts = allForecasts.filter((f: any) => f.sqlTypeId === sqlType.id);
       const typeHistory = sqlHistory.filter((h: any) => h.sqlTypeId === sqlType.id);
       const typeConversion = conversionRates.find((c: any) => c.sqlTypeId === sqlType.id);
@@ -161,11 +317,16 @@ export default function Dashboard() {
       
       return {
         name: sqlType.name,
+        displayName: sqlType.displayName || sqlType.name,
         revenue: Math.round(revenue),
         sqls,
         conversionRate: conversionRate.toFixed(2),
+        hasData: revenue > 0 || sqls > 0, // Track if this SQL type has any data
       };
     });
+    
+    // Sort by revenue descending, but include all SQL types (even with zero revenue)
+    return data.sort((a, b) => b.revenue - a.revenue);
   }, [allSqlTypes, allForecasts, sqlHistory, conversionRates]);
 
   // Format currency
@@ -199,6 +360,11 @@ export default function Dashboard() {
           <h1 className="text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
           <p className="text-sm text-muted-foreground">
             Overview of cascade model analytics and forecasts
+            {timeRange && (
+              <span className="ml-2 text-primary font-medium">
+                ({timeRange.start} - {timeRange.end})
+              </span>
+            )}
           </p>
         </div>
         {/* Filters - Simplified */}
@@ -206,10 +372,10 @@ export default function Dashboard() {
           <Card className="mb-4 border border-border">
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Filters</CardTitle>
-              <CardDescription className="text-sm">Filter analytics by company, region, or SQL type</CardDescription>
+              <CardDescription className="text-sm">Filter analytics by company, region, SQL type, year, or quarter</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Company</label>
                   <Select value={selectedCompany.toString()} onValueChange={(v) => setSelectedCompany(v === "all" ? "all" : parseInt(v))}>
@@ -260,6 +426,40 @@ export default function Dashboard() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Year</label>
+                  <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(v === "all" ? "all" : parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Years</SelectItem>
+                      {availableYears.map((year: number) => (
+                        <SelectItem key={year} value={year.toString()}>
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Quarter</label>
+                  <Select value={selectedQuarter.toString()} onValueChange={(v) => setSelectedQuarter(v === "all" ? "all" : parseInt(v))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Quarters</SelectItem>
+                      {availableQuarters.map((quarter: number) => (
+                        <SelectItem key={quarter} value={quarter.toString()}>
+                          Q{quarter}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -270,21 +470,54 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
             <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
-                <CardDescription className="text-sm text-muted-foreground mb-2">Total SQLs</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground mb-2">
+                  Total SQLs
+                  {(selectedYear !== "all" || selectedQuarter !== "all") && (
+                    <span className="ml-1 text-xs">
+                      {selectedYear !== "all" && selectedQuarter !== "all" 
+                        ? `(${selectedYear} Q${selectedQuarter})`
+                        : selectedYear !== "all"
+                        ? `(${selectedYear})`
+                        : `(Q${selectedQuarter})`}
+                    </span>
+                  )}
+                </CardDescription>
                 <div className="text-3xl font-semibold text-foreground">{kpis.totalSQLs.toLocaleString()}</div>
               </CardContent>
             </Card>
 
             <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
-                <CardDescription className="text-sm text-muted-foreground mb-2">Opportunities</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground mb-2">
+                  Opportunities
+                  {(selectedYear !== "all" || selectedQuarter !== "all") && (
+                    <span className="ml-1 text-xs">
+                      {selectedYear !== "all" && selectedQuarter !== "all" 
+                        ? `(${selectedYear} Q${selectedQuarter})`
+                        : selectedYear !== "all"
+                        ? `(${selectedYear})`
+                        : `(Q${selectedQuarter})`}
+                    </span>
+                  )}
+                </CardDescription>
                 <div className="text-3xl font-semibold text-foreground">{kpis.totalOpps.toLocaleString()}</div>
               </CardContent>
             </Card>
 
             <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
-                <CardDescription className="text-sm text-muted-foreground mb-2">Total Revenue</CardDescription>
+                <CardDescription className="text-sm text-muted-foreground mb-2">
+                  Total Revenue
+                  {(selectedYear !== "all" || selectedQuarter !== "all") && (
+                    <span className="ml-1 text-xs">
+                      {selectedYear !== "all" && selectedQuarter !== "all" 
+                        ? `(${selectedYear} Q${selectedQuarter})`
+                        : selectedYear !== "all"
+                        ? `(${selectedYear})`
+                        : `(Q${selectedQuarter})`}
+                    </span>
+                  )}
+                </CardDescription>
                 <div className="text-3xl font-semibold text-foreground">{formatCurrency(kpis.totalRevenue)}</div>
               </CardContent>
             </Card>
@@ -303,6 +536,68 @@ export default function Dashboard() {
           <div className="mb-4">
             <ConversionFunnel stages={funnelData} />
           </div>
+        )}
+
+        {/* Time Series Chart */}
+        {companies.length > 0 && timeSeriesData.length > 0 && (
+          <Card className="mb-4 border border-border">
+            <CardHeader>
+              <CardTitle className="text-base">Time Series Analysis</CardTitle>
+              <CardDescription className="text-sm">SQLs, Opportunities, and Revenue over time by quarter</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={350}>
+                <LineChart data={timeSeriesData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis 
+                    dataKey="period" 
+                    angle={-45}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 11 }}
+                  />
+                  <YAxis yAxisId="left" />
+                  <YAxis yAxisId="right" orientation="right" />
+                  <Tooltip 
+                    formatter={(value: number, name: string) => {
+                      if (name === "Revenue ($)") {
+                        return [`$${value.toLocaleString()}`, name];
+                      }
+                      return [value.toLocaleString(), name];
+                    }}
+                  />
+                  <Legend />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="sqls" 
+                    stroke="#3b82f6" 
+                    name="SQLs"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line 
+                    yAxisId="left"
+                    type="monotone" 
+                    dataKey="opps" 
+                    stroke="#8b5cf6" 
+                    name="Opportunities"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                  <Line 
+                    yAxisId="right"
+                    type="monotone" 
+                    dataKey="revenue" 
+                    stroke="#10b981" 
+                    name="Revenue ($)"
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
         )}
 
         {/* Regional Performance & SQL Type Effectiveness */}
@@ -335,25 +630,69 @@ export default function Dashboard() {
                 <CardDescription className="text-sm">Revenue contribution by SQL type</CardDescription>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={sqlTypeData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={(entry) => `${entry.name}: ${formatCurrency(entry.revenue)}`}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="revenue"
-                    >
-                      {sqlTypeData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="space-y-4">
+                  <ResponsiveContainer width="100%" height={250}>
+                    <PieChart>
+                      <Pie
+                        data={sqlTypeData}
+                        cx="50%"
+                        cy="50%"
+                        labelLine={false}
+                        label={false}
+                        outerRadius={80}
+                        fill="#8884d8"
+                        dataKey="revenue"
+                      >
+                        {sqlTypeData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip 
+                        formatter={(value: number) => formatCurrency(value)}
+                        labelFormatter={(label) => label}
+                      />
+                      <Legend 
+                        verticalAlign="bottom" 
+                        height={36}
+                        formatter={(value, entry: any) => {
+                          const revenue = entry.payload?.revenue || 0;
+                          return `${value}: ${formatCurrency(revenue)}`;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  {/* Additional breakdown list for clarity - shows all SQL types */}
+                  <div className="space-y-2 pt-2 border-t">
+                    {sqlTypeData.length > 0 ? (
+                      sqlTypeData.map((entry, index) => (
+                        <div key={entry.name} className="flex items-center justify-between text-sm">
+                          <div className="flex items-center gap-2">
+                            <div 
+                              className="w-3 h-3 rounded-full" 
+                              style={{ backgroundColor: COLORS[index % COLORS.length] }}
+                            />
+                            <span className="font-medium">{entry.displayName || entry.name}</span>
+                            {!entry.hasData && (
+                              <span className="text-xs text-muted-foreground italic">(no data)</span>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="font-semibold">{formatCurrency(entry.revenue)}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {kpis.totalRevenue > 0 
+                                ? `${((entry.revenue / kpis.totalRevenue) * 100).toFixed(1)}% of total`
+                                : '0% of total'}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    ) : (
+                      <div className="text-sm text-muted-foreground text-center py-2">
+                        No SQL types found
+                      </div>
+                    )}
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

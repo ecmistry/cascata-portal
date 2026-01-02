@@ -6,6 +6,7 @@ import { createRoot } from "react-dom/client";
 import superjson from "superjson";
 import App from "./App";
 import { getLoginUrl } from "./const";
+import { getCsrfToken } from "./lib/csrf";
 import "./index.css";
 
 const queryClient = new QueryClient();
@@ -47,9 +48,22 @@ const trpcClient = trpc.createClient({
       url: "/api/trpc",
       transformer: superjson,
       fetch(input, init) {
+        // Get CSRF token from cookies
+        const csrfToken = getCsrfToken();
+        
+        // Add CSRF token to headers for state-changing operations
+        const headers: HeadersInit = {
+          ...(init?.headers ?? {}),
+        };
+        
+        if (csrfToken) {
+          headers["x-csrf-token"] = csrfToken;
+        }
+        
         return globalThis.fetch(input, {
           ...(init ?? {}),
           credentials: "include",
+          headers,
         });
       },
     }),

@@ -53,3 +53,27 @@ export interface SqlType {
   createdAt: Date;
 }
 
+export interface SqlHistory {
+  id: number;
+  companyId: number;
+  regionId: number;
+  sqlTypeId: number;
+  year: number;
+  quarter: number;
+  volume: number;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ConversionRate {
+  id: number;
+  companyId: number;
+  regionId: number;
+  sqlTypeId: number;
+  oppCoverageRatio: number; // in basis points
+  winRateNew: number; // in basis points
+  winRateUpsell: number; // in basis points
+  createdAt: Date;
+  updatedAt: Date;
+}
+

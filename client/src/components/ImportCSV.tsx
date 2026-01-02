@@ -13,6 +13,17 @@ interface ImportCSVProps {
   onSuccess?: () => void;
 }
 
+/**
+ * ImportCSV Component
+ * 
+ * Provides a dialog interface for importing SQL history data from CSV files.
+ * Supports validation, error reporting, and batch processing of imported records.
+ * 
+ * @param companyId - The ID of the company to import data for
+ * @param onSuccess - Optional callback function called after successful import
+ * 
+ * @returns A button that opens a dialog for CSV file selection and import
+ */
 export function ImportCSV({ companyId, onSuccess }: ImportCSVProps) {
   const [open, setOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
@@ -21,8 +32,22 @@ export function ImportCSV({ companyId, onSuccess }: ImportCSVProps) {
   const utils = trpc.useUtils();
   const importMutation = trpc.sqlHistory.importCSV.useMutation({
     onSuccess: (result) => {
-      toast.success(`Successfully imported ${result.imported} SQL records`);
+      if (result.skipped > 0) {
+        toast.warning(
+          `Imported ${result.imported} records, ${result.skipped} skipped. Check console for details.`,
+          { duration: 5000 }
+        );
+        if (result.skippedRecords.length > 0) {
+          console.warn("Skipped records:", result.skippedRecords);
+        }
+      } else {
+        toast.success(`Successfully imported ${result.imported} SQL records`);
+      }
+      if (result.warnings.length > 0) {
+        result.warnings.forEach(warning => toast.warning(warning));
+      }
       utils.sqlHistory.list.invalidate();
+      setImporting(false);
       setOpen(false);
       setFile(null);
       onSuccess?.();
@@ -73,23 +98,46 @@ export function ImportCSV({ companyId, onSuccess }: ImportCSVProps) {
         return;
       }
 
-      const records = [];
+      interface ParsedRecord {
+        region: string;
+        sqlType: string;
+        year: number;
+        quarter: number;
+        volume: number;
+      }
+
+      const records: ParsedRecord[] = [];
       for (let i = 1; i < lines.length; i++) {
         const values = lines[i].split(',').map(v => v.trim());
         if (values.length !== headers.length) continue;
 
-        const record: any = {};
+        const record: Record<string, string> = {};
         headers.forEach((header, index) => {
           record[header] = values[index];
         });
 
+        const year = parseInt(record.year || '0', 10);
+        const quarter = parseInt(record.quarter || '0', 10);
+        const volume = parseInt(record.volume || '0', 10);
+
+        // Skip invalid records
+        if (isNaN(year) || isNaN(quarter) || isNaN(volume)) {
+          continue;
+        }
+
         records.push({
-          region: record.region,
-          sqlType: record.sqltype,
-          year: parseInt(record.year),
-          quarter: parseInt(record.quarter),
-          volume: parseInt(record.volume),
+          region: record.region || '',
+          sqlType: record.sqltype || '',
+          year,
+          quarter,
+          volume,
         });
+      }
+
+      if (records.length === 0) {
+        toast.error("No valid records found in CSV file");
+        setImporting(false);
+        return;
       }
 
       importMutation.mutate({
@@ -97,7 +145,8 @@ export function ImportCSV({ companyId, onSuccess }: ImportCSVProps) {
         records,
       });
     } catch (error) {
-      toast.error("Failed to parse CSV file");
+      const message = error instanceof Error ? error.message : "Failed to parse CSV file";
+      toast.error(message);
       setImporting(false);
     }
   };

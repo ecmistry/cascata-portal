@@ -1,6 +1,8 @@
 export const COOKIE_NAME = "app_session_id";
 export const ONE_YEAR_MS = 1000 * 60 * 60 * 24 * 365; // Keep for backward compatibility
 export const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30; // 30 days (reduced from 1 year)
+export const INACTIVITY_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes of inactivity before auto-logout
+export const INACTIVITY_WARNING_MS = 5 * 60 * 1000; // Show warning 5 minutes before timeout
 export const AXIOS_TIMEOUT_MS = 30_000;
 export const UNAUTHED_ERR_MSG = 'Please login (10001)';
 export const NOT_ADMIN_ERR_MSG = 'You do not have required permission (10002)';

@@ -89,6 +89,9 @@ export const appRouter = router({
         description: z.string().max(5000).optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (!ctx.user) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+        }
         const companyId = await db.createCompany({
           userId: ctx.user.id,
           name: input.name,
@@ -194,13 +197,20 @@ export const appRouter = router({
         records: z.array(z.object({
           region: z.string().max(100),
           sqlType: z.string().max(100),
-          year: z.number(),
-          quarter: z.number().min(1).max(4),
-          volume: z.number().min(0),
+          year: z.number().int().min(2000).max(2100),
+          quarter: z.number().int().min(1).max(4),
+          volume: z.number().int().min(0).max(1000000),
         })),
       }))
       .mutation(async ({ input }) => {
         const { companyId, records } = input;
+        
+        // Validation: Check for duplicates
+        const recordKeys = new Set<string>();
+        const duplicates: string[] = [];
+        const currentYear = new Date().getFullYear();
+        const minYear = currentYear - 10; // Allow 10 years in past
+        const maxYear = currentYear + 10; // Allow 10 years in future
         
         // Get region and sqlType mappings
         const regions = await db.getRegionsByCompany(companyId);
@@ -209,14 +219,72 @@ export const appRouter = router({
         const regionMap = new Map(regions.map(r => [r.name.toLowerCase(), r.id]));
         const sqlTypeMap = new Map(sqlTypes.map(s => [s.name.toLowerCase(), s.id]));
         
-        let imported = 0;
+        // Validate and prepare records for batch insert
+        const validRecords: Array<{
+          companyId: number;
+          regionId: number;
+          sqlTypeId: number;
+          year: number;
+          quarter: number;
+          volume: number;
+        }> = [];
+        const skippedRecords: Array<{
+          record: typeof records[0];
+          reason: string;
+        }> = [];
+        
         for (const record of records) {
+          // Check for duplicates
+          const recordKey = `${record.region.toLowerCase()}-${record.sqlType.toLowerCase()}-${record.year}-${record.quarter}`;
+          if (recordKeys.has(recordKey)) {
+            duplicates.push(recordKey);
+            skippedRecords.push({
+              record,
+              reason: "Duplicate record",
+            });
+            continue;
+          }
+          recordKeys.add(recordKey);
+          
+          // Validate year range
+          if (record.year < minYear || record.year > maxYear) {
+            skippedRecords.push({
+              record,
+              reason: `Year ${record.year} is outside valid range (${minYear}-${maxYear})`,
+            });
+            continue;
+          }
+          
+          // Validate region and SQL type
           const regionId = regionMap.get(record.region.toLowerCase());
           const sqlTypeId = sqlTypeMap.get(record.sqlType.toLowerCase());
           
-          if (!regionId || !sqlTypeId) continue;
+          if (!regionId) {
+            skippedRecords.push({
+              record,
+              reason: `Region "${record.region}" not found`,
+            });
+            continue;
+          }
           
-          await db.upsertSqlHistory({
+          if (!sqlTypeId) {
+            skippedRecords.push({
+              record,
+              reason: `SQL Type "${record.sqlType}" not found`,
+            });
+            continue;
+          }
+          
+          // Validate volume
+          if (record.volume < 0 || record.volume > 1000000) {
+            skippedRecords.push({
+              record,
+              reason: `Volume ${record.volume} is outside valid range (0-1,000,000)`,
+            });
+            continue;
+          }
+          
+          validRecords.push({
             companyId,
             regionId,
             sqlTypeId,
@@ -224,10 +292,29 @@ export const appRouter = router({
             quarter: record.quarter,
             volume: record.volume,
           });
-          imported++;
         }
         
-        return { imported };
+        // Batch insert valid records
+        let imported = 0;
+        if (validRecords.length > 0) {
+          // Process in batches of 100 for better performance
+          const batchSize = 100;
+          for (let i = 0; i < validRecords.length; i += batchSize) {
+            const batch = validRecords.slice(i, i + batchSize);
+            await Promise.all(
+              batch.map(record => db.upsertSqlHistory(record))
+            );
+            imported += batch.length;
+          }
+        }
+        
+        return {
+          imported,
+          skipped: skippedRecords.length,
+          skippedRecords: skippedRecords.slice(0, 50), // Limit to first 50 for response size
+          duplicates: duplicates.length,
+          warnings: duplicates.length > 0 ? [`${duplicates.length} duplicate records found`] : [],
+        };
       }),
   }),
 
@@ -381,6 +468,9 @@ export const appRouter = router({
         totalOpportunitiesChangePercent: z.number().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
+        if (!ctx.user) {
+          throw new TRPCError({ code: "UNAUTHORIZED", message: "User not authenticated" });
+        }
         const scenarioId = await db.createScenario({
           companyId: input.companyId,
           userId: ctx.user.id,
@@ -498,6 +588,47 @@ export const appRouter = router({
         const bigquerySync = await import('./bigquerySync');
         return await bigquerySync.syncCompanyData(input.companyId);
       }),
+  }),
+
+  // Dashboard router
+  dashboard: router({
+    playground: router({
+      cascataTest: publicProcedure
+        .input(
+          z
+            .object({
+              page: z.number().int().min(1).default(1),
+              pageSize: z.number().int().min(1).max(100).default(25),
+              bypassCache: z.boolean().optional(),
+            })
+            .optional()
+        )
+        .query(async ({ input }) => {
+          const bigqueryPlayground = await import('./bigquery-playground');
+          const page = input?.page ?? 1;
+          const pageSize = input?.pageSize ?? 25;
+          const bypassCache = input?.bypassCache ?? false;
+          return await bigqueryPlayground.getHubSpotContacts(page, pageSize, bypassCache);
+        }),
+
+      cascataTestDeals: publicProcedure
+        .input(
+          z
+            .object({
+              page: z.number().int().min(1).default(1),
+              pageSize: z.number().int().min(1).max(100).default(25),
+              bypassCache: z.boolean().optional(),
+            })
+            .optional()
+        )
+        .query(async ({ input }) => {
+          const bigqueryPlayground = await import('./bigquery-playground');
+          const page = input?.page ?? 1;
+          const pageSize = input?.pageSize ?? 25;
+          const bypassCache = input?.bypassCache ?? false;
+          return await bigqueryPlayground.getHubSpotDeals(page, pageSize, bypassCache);
+        }),
+    }),
   }),
 });
 

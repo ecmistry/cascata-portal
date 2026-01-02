@@ -132,15 +132,53 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
         // Get time distribution
         const timeDist = timeDistMap.get(sqlType.id) || defaultTimeDist;
 
-        // Calculate opportunities created in each time bucket
+        // Calculate opportunities created from SQLs in this quarter
         const baseOpportunities = (sqlVolume * coverageRatio) / 10000; // Convert basis points
 
-        const oppSameQuarter = (baseOpportunities * timeDist.sameQuarterPct) / 10000;
-        const oppNextQuarter = (baseOpportunities * timeDist.nextQuarterPct) / 10000;
-        const oppTwoQuartersLater = (baseOpportunities * timeDist.twoQuarterPct) / 10000;
+        // Calculate opportunities that appear in THIS quarter
+        // This includes:
+        // 1. Opportunities from current quarter's SQLs (89%)
+        // 2. Opportunities from previous quarter's SQLs (10%)
+        // 3. Opportunities from two quarters ago SQLs (1%)
+        let totalOpportunities = 0;
 
-        // Total opportunities for this quarter
-        const totalOpportunities = oppSameQuarter + oppNextQuarter + oppTwoQuartersLater;
+        // Opportunities from current quarter's SQLs
+        const oppFromCurrentQuarter = (baseOpportunities * timeDist.sameQuarterPct) / 10000;
+        totalOpportunities += oppFromCurrentQuarter;
+
+        // Opportunities from previous quarter's SQLs (flowing into this quarter)
+        if (quarterOffset > 0) {
+          const prevQuarter = getQuarterAhead(startYear, startQuarter, quarterOffset - 1);
+          const prevHistoryRecord = sqlHistoryData.find(
+            h =>
+              h.regionId === region.id &&
+              h.sqlTypeId === sqlType.id &&
+              h.year === prevQuarter.year &&
+              h.quarter === prevQuarter.quarter
+          );
+          if (prevHistoryRecord) {
+            const prevBaseOpps = (prevHistoryRecord.volume * coverageRatio) / 10000;
+            const oppFromPrevQuarter = (prevBaseOpps * timeDist.nextQuarterPct) / 10000;
+            totalOpportunities += oppFromPrevQuarter;
+          }
+        }
+
+        // Opportunities from two quarters ago SQLs (flowing into this quarter)
+        if (quarterOffset > 1) {
+          const twoQuartersAgo = getQuarterAhead(startYear, startQuarter, quarterOffset - 2);
+          const twoQuartersAgoRecord = sqlHistoryData.find(
+            h =>
+              h.regionId === region.id &&
+              h.sqlTypeId === sqlType.id &&
+              h.year === twoQuartersAgo.year &&
+              h.quarter === twoQuartersAgo.quarter
+          );
+          if (twoQuartersAgoRecord) {
+            const twoQuartersAgoBaseOpps = (twoQuartersAgoRecord.volume * coverageRatio) / 10000;
+            const oppFromTwoQuartersAgo = (twoQuartersAgoBaseOpps * timeDist.twoQuarterPct) / 10000;
+            totalOpportunities += oppFromTwoQuartersAgo;
+          }
+        }
 
         // Calculate revenue
         const dealEcon = dealEconomicsMap.get(region.id);

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useMemo } from "react";
 import { trpc } from "@/lib/trpc";
+import { skipToken } from "@tanstack/react-query";
 import { Clock, User, FileText, Database, Settings, TrendingUp } from "lucide-react";
 import DashboardLayout from "@/components/DashboardLayout";
 import { formatDistanceToNow } from "date-fns";
@@ -15,11 +16,31 @@ interface ChangeEntry {
   user?: string;
 }
 
+/**
+ * ChangeHistory Page Component
+ * 
+ * Displays an audit trail of all changes made to the portal.
+ * Shows:
+ * - Model/company creation events
+ * - Forecast calculation events
+ * - Data updates and modifications
+ * - Configuration changes
+ * - User activity
+ * 
+ * Features:
+ * - Chronological listing of changes
+ * - Change type categorization
+ * - Relative timestamps (e.g., "2 hours ago")
+ * - Statistics on total changes
+ * 
+ * @returns A page component displaying the change history audit trail
+ */
 export default function ChangeHistory() {
   const { data: companies = [] } = trpc.company.list.useQuery();
-  const { data: allForecasts = [] } = trpc.forecast.list.useQuery(undefined, {
-    enabled: companies.length > 0,
-  });
+  const firstCompanyId = companies[0]?.id;
+  const { data: allForecasts = [] } = trpc.forecast.list.useQuery(
+    firstCompanyId ? { companyId: firstCompanyId } : skipToken
+  );
 
   const changeHistory = useMemo(() => {
     const changes: ChangeEntry[] = [];

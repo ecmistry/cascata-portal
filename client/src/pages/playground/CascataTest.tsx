@@ -90,7 +90,15 @@ export default function CascataTest() {
   }, [allContactColumnsData, data]);
 
   // Get all available columns from deals table (from dedicated endpoint)
-  const { data: allDealColumnsData } = trpc.dashboard.playground.getAllDealColumns.useQuery();
+  // Refetch when dealsData changes to ensure we get updated columns when deals are synced
+  const { data: allDealColumnsData, refetch: refetchDealColumns } = trpc.dashboard.playground.getAllDealColumns.useQuery();
+  
+  // Refetch deal columns when deals data becomes available
+  useEffect(() => {
+    if (dealsData?.data && dealsData.data.length > 0 && (!allDealColumnsData || allDealColumnsData.length <= 20)) {
+      refetchDealColumns();
+    }
+  }, [dealsData?.data, allDealColumnsData, refetchDealColumns]);
   const allDealColumns = useMemo(() => {
     if (allDealColumnsData && allDealColumnsData.length > 0) {
       return allDealColumnsData;

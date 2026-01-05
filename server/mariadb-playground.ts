@@ -448,7 +448,13 @@ export async function getAllDealPropertyKeys(): Promise<string[]> {
 
     const allKeys = Array.from(propertyKeysSet).sort();
     
-    console.log("[MariaDB Playground] Found deal property keys", { count: allKeys.length, fromDatabase: rows.length > 0 });
+    const hasPropertiesFromJson = rows.length > 0 && allKeys.length > 20; // More than just standard columns
+    console.log("[MariaDB Playground] Found deal property keys", { 
+      count: allKeys.length, 
+      fromDatabase: rows.length > 0,
+      hasPropertiesFromJson,
+      sampleKeys: allKeys.slice(0, 10)
+    });
     
     return allKeys;
   } catch (error: unknown) {

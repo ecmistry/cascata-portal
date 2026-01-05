@@ -7,6 +7,7 @@ import {
   getRecentlyModifiedObjects,
   getAllProperties,
 } from './hubspot-api.js';
+import { hubspotConfig } from '../config/hubspot.js';
 import {
   initializeSyncState,
   isFirstSync,
@@ -163,8 +164,117 @@ async function upsertDeals(deals: HubSpotDeal[]): Promise<void> {
 }
 
 /**
+ * Fetch deals in batches and process them immediately to reduce memory usage
+ * This replicates the getAllObjects logic but processes batches as they're fetched
+ * Also avoids URL length issues when fetching many properties
+ */
+async function fetchAndProcessDealsInBatches(
+  properties: string[],
+  batchCallback: (deals: HubSpotDeal[]) => Promise<void>
+): Promise<number> {
+  let totalCount = 0;
+  let after: string | undefined;
+  const safeLimit = 50; // HubSpot API safe limit
+  
+  // Rate limiting tracker (simplified version)
+  const rateLimitRequests: number[] = [];
+  const rateLimitWindowMs = 10000; // 10 seconds
+  const maxRequestsPerWindow = 100;
+  
+  async function makeRequestWithRetry<T>(url: string, options?: RequestInit, retries = 3): Promise<T> {
+    // Simple rate limiting check
+    const now = Date.now();
+    const windowStart = now - rateLimitWindowMs;
+    rateLimitRequests.push(now);
+    rateLimitRequests.splice(0, rateLimitRequests.findIndex(t => t > windowStart));
+    
+    if (rateLimitRequests.length >= maxRequestsPerWindow) {
+      const waitTime = rateLimitRequests[0] + rateLimitWindowMs - now;
+      if (waitTime > 0) {
+        logger.warn(`Rate limit approaching, waiting ${waitTime}ms`);
+        await new Promise((resolve) => setTimeout(resolve, waitTime));
+      }
+    }
+    
+    const headers = {
+      'Authorization': `Bearer ${hubspotConfig.apiKey}`,
+      'Content-Type': 'application/json',
+    };
+    
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        const response = await fetch(url, { 
+          ...options,
+          headers: {
+            ...headers,
+            ...(options?.headers || {}),
+          },
+        });
+        
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(`HubSpot API error: ${response.status} ${response.statusText} - ${errorText}`);
+        }
+        
+        return await response.json() as T;
+      } catch (error) {
+        logger.warn(`Request failed (attempt ${attempt + 1}/${retries})`, { url, error });
+        
+        if (attempt === retries - 1) {
+          throw error;
+        }
+        
+        // Exponential backoff
+        const delay = Math.pow(2, attempt) * 1000;
+        await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+    }
+    
+    throw new Error('Max retries exceeded');
+  }
+  
+  do {
+    // Use POST search endpoint to avoid URL length issues with many properties
+    const url = `${hubspotConfig.baseUrl}/crm/v3/objects/deals/search`;
+    
+    const body = {
+      filterGroups: [], // Empty filter to get all deals
+      properties: properties,
+      sorts: [
+        {
+          propertyName: 'hs_lastmodifieddate',
+          direction: 'ASCENDING',
+        },
+      ],
+      limit: safeLimit,
+      after: after,
+    };
+    
+    const response = await makeRequestWithRetry<{
+      results: HubSpotDeal[];
+      paging?: { next?: { after: string } };
+    }>(url, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    });
+    
+    const batch = response.results;
+    if (batch.length > 0) {
+      await batchCallback(batch);
+      totalCount += batch.length;
+      logger.info(`Fetched and processed ${batch.length} deals, total: ${totalCount}`);
+    }
+    
+    after = response.paging?.next?.after;
+  } while (after);
+  
+  return totalCount;
+}
+
+/**
  * Perform full sync of all deals
  * This will replace all existing data by deleting old records first
+ * Deals are processed in batches to reduce memory usage and avoid URL length issues
  */
 async function fullSync(): Promise<number> {
   logger.info('Starting full sync of deals');
@@ -179,14 +289,18 @@ async function fullSync(): Promise<number> {
   const allProperties = await getAllProperties('deals');
   const propertiesToFetch = allProperties.length > 0 ? allProperties : DEAL_PROPERTIES;
   
-  logger.info(`Fetching deals with ${propertiesToFetch.length} properties`);
+  logger.info(`Fetching deals with ${propertiesToFetch.length} properties (processing in batches)`);
   
-  const deals = await getAllObjects<HubSpotDeal>('deals', propertiesToFetch);
+  // Fetch and process deals in batches to reduce memory usage and avoid URL length issues
+  const totalCount = await fetchAndProcessDealsInBatches(
+    propertiesToFetch,
+    async (batch) => {
+      await upsertDeals(batch);
+    }
+  );
   
-  await upsertDeals(deals);
-  
-  logger.info(`Full sync completed: ${deals.length} deals`);
-  return deals.length;
+  logger.info(`Full sync completed: ${totalCount} deals`);
+  return totalCount;
 }
 
 /**

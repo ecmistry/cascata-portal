@@ -8,14 +8,6 @@ export interface Company {
   userId: number;
   name: string;
   description: string | null;
-  bigqueryEnabled: boolean;
-  bigqueryProjectId: string | null;
-  bigqueryDatasetId: string | null;
-  bigqueryCredentials: string | null;
-  bigquerySqlHistoryTable: string | null;
-  bigqueryConversionRatesTable: string | null;
-  bigqueryActualsTable: string | null;
-  bigqueryLastSync: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

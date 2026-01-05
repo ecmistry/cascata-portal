@@ -2,7 +2,7 @@ import { z } from "zod";
 import { COOKIE_NAME, SESSION_DURATION_MS } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, protectedProcedure, companyProtectedProcedure, router } from "./_core/trpc";
+import { publicProcedure, protectedProcedure, companyProtectedProcedure, adminProcedure, router } from "./_core/trpc";
 import * as db from "./db";
 import { sdk } from "./_core/sdk";
 import bcrypt from "bcrypt";
@@ -549,47 +549,6 @@ export const appRouter = router({
       }),
   }),
 
-  // BigQuery integration
-  bigquery: router({  
-    updateConfig: companyProtectedProcedure
-      .input(z.object({
-        companyId: z.number(),
-        bigqueryEnabled: z.boolean().optional(),
-        bigqueryProjectId: z.string().max(255).optional(),
-        bigqueryDatasetId: z.string().max(255).optional(),
-        bigqueryCredentials: z.string().optional(), // Should be encrypted in production
-        bigquerySqlHistoryTable: z.string().max(255).optional(),
-        bigqueryConversionRatesTable: z.string().max(255).optional(),
-        bigqueryActualsTable: z.string().max(255).optional(),
-      }))
-      .mutation(async ({ input }) => {
-        const { companyId, ...config } = input;
-        await db.updateCompanyBigQueryConfig(companyId, config);
-        return { success: true };
-      }),
-
-    testConnection: companyProtectedProcedure
-      .input(z.object({ companyId: z.number() }))
-      .mutation(async ({ input }) => {
-        const bigquerySync = await import('./bigquerySync');
-        return await bigquerySync.testConnection(input.companyId);
-      }),
-
-    listTables: companyProtectedProcedure
-      .input(z.object({ companyId: z.number() }))
-      .query(async ({ input }) => {
-        const bigquerySync = await import('./bigquerySync');
-        return await bigquerySync.listTables(input.companyId);
-      }),
-
-    sync: companyProtectedProcedure
-      .input(z.object({ companyId: z.number() }))
-      .mutation(async ({ input }) => {
-        const bigquerySync = await import('./bigquerySync');
-        return await bigquerySync.syncCompanyData(input.companyId);
-      }),
-  }),
-
   // Dashboard router
   dashboard: router({
     playground: router({
@@ -604,11 +563,11 @@ export const appRouter = router({
             .optional()
         )
         .query(async ({ input }) => {
-          const bigqueryPlayground = await import('./bigquery-playground');
+          const mariadbPlayground = await import('./mariadb-playground');
           const page = input?.page ?? 1;
           const pageSize = input?.pageSize ?? 25;
           const bypassCache = input?.bypassCache ?? false;
-          return await bigqueryPlayground.getHubSpotContacts(page, pageSize, bypassCache);
+          return await mariadbPlayground.getHubSpotContacts(page, pageSize, bypassCache);
         }),
 
       cascataTestDeals: publicProcedure
@@ -622,11 +581,73 @@ export const appRouter = router({
             .optional()
         )
         .query(async ({ input }) => {
-          const bigqueryPlayground = await import('./bigquery-playground');
+          const mariadbPlayground = await import('./mariadb-playground');
           const page = input?.page ?? 1;
           const pageSize = input?.pageSize ?? 25;
           const bypassCache = input?.bypassCache ?? false;
-          return await bigqueryPlayground.getHubSpotDeals(page, pageSize, bypassCache);
+          return await mariadbPlayground.getHubSpotDeals(page, pageSize, bypassCache);
+        }),
+
+      getAllContactColumns: publicProcedure
+        .query(async () => {
+          const mariadbPlayground = await import('./mariadb-playground');
+          return await mariadbPlayground.getAllContactPropertyKeys();
+        }),
+
+      getAllDealColumns: publicProcedure
+        .query(async () => {
+          const mariadbPlayground = await import('./mariadb-playground');
+          return await mariadbPlayground.getAllDealPropertyKeys();
+        }),
+
+      syncHubSpot: adminProcedure
+        .mutation(async () => {
+          // Trigger manual sync by running the connector in --once mode
+          const { exec } = await import('child_process');
+          const { promisify } = await import('util');
+          const execAsync = promisify(exec);
+          
+          try {
+            // Run the connector script directly with --once flag
+            const connectorPath = '/home/ec2-user/cascade_portal/hubspot-connector/hubspot-mariadb-connector';
+            const command = `cd ${connectorPath} && npm run start:once`;
+            
+            // Run in background and don't wait for completion
+            exec(command, { 
+              cwd: connectorPath,
+              env: {
+                ...process.env,
+                // Environment variables should be set in the system or PM2 config
+                // HUBSPOT_API_KEY, DB_HOST, DB_PORT, DB_USER, DB_PASSWORD are inherited from process.env
+                DB_NAME: 'cascade_portal',
+                SYNC_INTERVAL_MINUTES: '15',
+                SYNC_BUFFER_MINUTES: '5',
+                RATE_LIMIT_REQUESTS: '90',
+                LOG_LEVEL: 'info',
+              }
+            }, (error, stdout, stderr) => {
+              if (error) {
+                console.error('[HubSpot Sync] Error:', error);
+              }
+              if (stdout) {
+                console.log('[HubSpot Sync] Output:', stdout);
+              }
+              if (stderr) {
+                console.error('[HubSpot Sync] Stderr:', stderr);
+              }
+            });
+            
+            return {
+              success: true,
+              message: 'HubSpot sync triggered successfully. The sync is running in the background.',
+            };
+          } catch (error: any) {
+            console.error('[HubSpot Sync] Error triggering sync:', error);
+            return {
+              success: false,
+              message: error.message || 'Failed to trigger sync',
+            };
+          }
         }),
     }),
   }),

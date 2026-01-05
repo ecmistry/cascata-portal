@@ -26,7 +26,7 @@ export default function Home() {
                       <CardTitle className="text-xl">1. Input Your Data</CardTitle>
                     </div>
                     <CardDescription>
-                      Provide historical SQL volumes, conversion rates, and deal economics through our guided questionnaire or import from BigQuery.
+                      Provide historical SQL volumes, conversion rates, and deal economics through our guided questionnaire or import from HubSpot.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -203,25 +203,6 @@ export default function Home() {
                   </CardContent>
                 </Card>
 
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardHeader>
-                    <div className="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center mb-3">
-                      <Database className="h-6 w-6 text-orange-500" />
-                    </div>
-                    <CardTitle>BigQuery Integration</CardTitle>
-                    <CardDescription>
-                      Connect to your data warehouse for automated data synchronization.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-1.5 text-sm text-muted-foreground">
-                      <li>• Sync SQL history automatically</li>
-                      <li>• Import conversion rates</li>
-                      <li>• Pull actual revenue data</li>
-                      <li>• Scheduled data updates</li>
-                    </ul>
-                  </CardContent>
-                </Card>
 
                 <Card className="hover:shadow-md transition-shadow">
                   <CardHeader>

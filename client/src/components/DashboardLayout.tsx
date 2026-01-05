@@ -455,7 +455,7 @@ function DashboardLayoutContent({
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            {(location.startsWith("/performance/") || location.startsWith("/bigquery/") || location.startsWith("/whatif/") || location.startsWith("/scenarios/")) && (
+            {(location.startsWith("/performance/") || location.startsWith("/whatif/") || location.startsWith("/scenarios/")) && (
               <Button 
                 variant="ghost" 
                 size="sm" 
@@ -463,8 +463,6 @@ function DashboardLayoutContent({
                   let companyId = "0";
                   if (location.startsWith("/performance/")) {
                     companyId = location.split("/performance/")[1]?.split("/")[0] || "0";
-                  } else if (location.startsWith("/bigquery/")) {
-                    companyId = location.split("/bigquery/")[1]?.split("/")[0] || "0";
                   } else if (location.startsWith("/whatif/")) {
                     companyId = location.split("/whatif/")[1]?.split("/")[0] || "0";
                   } else if (location.startsWith("/scenarios/")) {

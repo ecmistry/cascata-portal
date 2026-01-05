@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { RefreshCw, ChevronLeft, ChevronRight, Columns } from "lucide-react";
+import { RefreshCw, ChevronLeft, ChevronRight, Columns, RotateCw } from "lucide-react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Popover,
@@ -40,10 +40,10 @@ export default function CascataTest() {
   const [isColumnPopoverOpen2, setIsColumnPopoverOpen2] = useState(false);
   const [isColumnPopoverOpen3, setIsColumnPopoverOpen3] = useState(false);
   const [isColumnPopoverOpen4, setIsColumnPopoverOpen4] = useState(false);
-  const [selectedColumn1, setSelectedColumn1] = useState<string>("property_admin_first_became_a_sql_date");
-  const [selectedColumn2, setSelectedColumn2] = useState<string>("property_admin_pod");
-  const [selectedColumn3, setSelectedColumn3] = useState<string>("property_sql_type");
-  const [selectedColumn4, setSelectedColumn4] = useState<string>("property_admin_first_became_an_opportunity_date");
+  const [selectedColumn1, setSelectedColumn1] = useState<string>("admin___first_became_a_sql_date");
+  const [selectedColumn2, setSelectedColumn2] = useState<string>("admin_pod");
+  const [selectedColumn3, setSelectedColumn3] = useState<string>("sql_type");
+  const [selectedColumn4, setSelectedColumn4] = useState<string>("admin___first_became_an_opportunity_date");
   const [selectedColumn5, setSelectedColumn5] = useState<string>("property_deal_geo_pods");
   const [selectedColumn6, setSelectedColumn6] = useState<string>("property_dealtype");
   const [selectedColumn7, setSelectedColumn7] = useState<string>("property_amount_in_home_currency");
@@ -60,6 +60,9 @@ export default function CascataTest() {
   const [isColumnPopoverOpen8, setIsColumnPopoverOpen8] = useState(false);
   const [isColumnPopoverOpen9, setIsColumnPopoverOpen9] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const syncHubSpotMutation = trpc.dashboard.playground.syncHubSpot.useMutation();
 
   const { data, isLoading, isFetching } = trpc.dashboard.playground.cascataTest.useQuery({
     page,
@@ -71,29 +74,35 @@ export default function CascataTest() {
     pageSize: 25,
   });
 
-  // Get all available columns from contacts table
+  // Get all available columns from contacts table (from dedicated endpoint)
+  const { data: allContactColumnsData } = trpc.dashboard.playground.getAllContactColumns.useQuery();
   const allColumns = useMemo(() => {
+    if (allContactColumnsData && allContactColumnsData.length > 0) {
+      return allContactColumnsData;
+    }
+    // Fallback to extracting from paginated data if endpoint not available
     if (!data?.data || data.data.length === 0) return [];
     const columnSet = new Set<string>();
-    // Collect all unique column names from all rows
     data.data.forEach((row) => {
       Object.keys(row).forEach((key) => columnSet.add(key));
     });
-    // Return columns in a consistent order (alphabetically sorted)
     return Array.from(columnSet).sort();
-  }, [data]);
+  }, [allContactColumnsData, data]);
 
-  // Get all available columns from deals table
+  // Get all available columns from deals table (from dedicated endpoint)
+  const { data: allDealColumnsData } = trpc.dashboard.playground.getAllDealColumns.useQuery();
   const allDealColumns = useMemo(() => {
+    if (allDealColumnsData && allDealColumnsData.length > 0) {
+      return allDealColumnsData;
+    }
+    // Fallback to extracting from paginated data if endpoint not available
     if (!dealsData?.data || dealsData.data.length === 0) return [];
     const columnSet = new Set<string>();
-    // Collect all unique column names from all rows
     dealsData.data.forEach((row) => {
       Object.keys(row).forEach((key) => columnSet.add(key));
     });
-    // Return columns in a consistent order (alphabetically sorted)
     return Array.from(columnSet).sort();
-  }, [dealsData]);
+  }, [allDealColumnsData, dealsData]);
 
   // Update selectedColumns set when individual column selections change
   useEffect(() => {
@@ -218,6 +227,29 @@ export default function CascataTest() {
     }
   };
 
+  const handleSyncHubSpot = async () => {
+    if (!isAdmin) return;
+    
+    setIsSyncing(true);
+    try {
+      const result = await syncHubSpotMutation.mutateAsync();
+      if (result.success) {
+        // Show success message (you might want to add a toast notification here)
+        console.log('HubSpot sync triggered successfully');
+        // Optionally refresh the data after a delay
+        setTimeout(() => {
+          handleRefresh();
+        }, 5000);
+      } else {
+        console.error('HubSpot sync failed:', result.message);
+      }
+    } catch (error) {
+      console.error('Error triggering HubSpot sync:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <DashboardLayout>
@@ -243,10 +275,10 @@ export default function CascataTest() {
 
   // Define default values for highlighting
   const defaultValues = {
-    column1: "property_admin_first_became_a_sql_date",
-    column2: "property_admin_pod",
-    column3: "property_sql_type",
-    column4: "property_admin_first_became_an_opportunity_date",
+    column1: "admin___first_became_a_sql_date",
+    column2: "admin_pod",
+    column3: "sql_type",
+    column4: "admin___first_became_an_opportunity_date",
     column5: "property_deal_geo_pods",
     column6: "property_dealtype",
     column7: "property_amount_in_home_currency",
@@ -272,7 +304,21 @@ export default function CascataTest() {
         {/* Combined Table */}
         <Card>
           <CardHeader>
-            <CardTitle>Model Configuration</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>Model Configuration</CardTitle>
+              {isAdmin && (
+                <Button
+                  onClick={handleSyncHubSpot}
+                  disabled={isSyncing}
+                  variant="outline"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <RotateCw className={`h-4 w-4 ${isSyncing ? 'animate-spin' : ''}`} />
+                  {isSyncing ? 'Syncing...' : 'Sync HubSpot Data'}
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">

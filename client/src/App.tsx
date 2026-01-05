@@ -9,7 +9,6 @@ import Dashboard from "./pages/Dashboard";
 import Setup from "./pages/Setup";
 import Model from "./pages/Model";
 import Integrations from "./pages/Integrations";
-import BigQueryConfig from "./pages/BigQueryConfig";
 import Performance from "./pages/Performance";
 import WhatIfAnalysis from "./pages/WhatIfAnalysis";
 import Scenarios from "./pages/Scenarios";
@@ -41,7 +40,6 @@ function Router() {
       <Route path={"/setup"} component={Setup} />
       <Route path={"/model/:id"} component={Model} />
       <Route path={"/integrations"} component={Integrations} />
-      <Route path={"/bigquery/:id"} component={BigQueryConfig} />
       <Route path={"/performance/:id"} component={Performance} />
       <Route path={"/whatif/:id"} component={WhatIfAnalysis} />
       <Route path={"/scenarios/:id"} component={Scenarios} />

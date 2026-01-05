@@ -252,14 +252,6 @@ export default function Model() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setLocation(`/bigquery/${companyId}`)}
-              >
-                <Database className="w-4 h-4 mr-2" />
-                BigQuery
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
                 onClick={() => setLocation(`/performance/${companyId}`)}
               >
                 <TrendingUp className="w-4 h-4 mr-2" />

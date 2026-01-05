@@ -13,7 +13,6 @@ export const ERROR_MESSAGES = {
   DATABASE_UNAVAILABLE: "Database connection unavailable. Please try again later.",
   COMPANY_NOT_FOUND: "Company not found or you don't have access.",
   INVALID_REGION_OR_SQL_TYPE: "Invalid region or SQL type specified.",
-  BIGQUERY_SYNC_FAILED: "BigQuery sync failed. Please check your configuration.",
   INVALID_IDENTIFIER: "Invalid identifier format.",
 } as const;
 

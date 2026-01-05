@@ -27,15 +27,6 @@ export const companies = mysqlTable("companies", {
   userId: int("userId").notNull(), // Owner of this company model
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  // BigQuery integration configuration
-  bigqueryEnabled: boolean("bigqueryEnabled").default(false).notNull(),
-  bigqueryProjectId: varchar("bigqueryProjectId", { length: 255 }),
-  bigqueryDatasetId: varchar("bigqueryDatasetId", { length: 255 }),
-  bigqueryCredentials: text("bigqueryCredentials"), // JSON key file
-  bigquerySqlHistoryTable: varchar("bigquerySqlHistoryTable", { length: 255 }),
-  bigqueryConversionRatesTable: varchar("bigqueryConversionRatesTable", { length: 255 }),
-  bigqueryActualsTable: varchar("bigqueryActualsTable", { length: 255 }),
-  bigqueryLastSync: timestamp("bigqueryLastSync"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

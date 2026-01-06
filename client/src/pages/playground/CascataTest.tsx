@@ -44,21 +44,24 @@ export default function CascataTest() {
   const [selectedColumn2, setSelectedColumn2] = useState<string>("admin_pod");
   const [selectedColumn3, setSelectedColumn3] = useState<string>("sql_type");
   const [selectedColumn4, setSelectedColumn4] = useState<string>("admin___first_became_an_opportunity_date");
-  const [selectedColumn5, setSelectedColumn5] = useState<string>("property_deal_geo_pods");
-  const [selectedColumn6, setSelectedColumn6] = useState<string>("property_dealtype");
-  const [selectedColumn7, setSelectedColumn7] = useState<string>("property_amount_in_home_currency");
-  const [selectedColumn8, setSelectedColumn8] = useState<string>("property_type_of_sql_associated_to_deal");
-  const [selectedColumn9, setSelectedColumn9] = useState<string>("property_closedate");
+  const [selectedColumn5, setSelectedColumn5] = useState<string>("deal_geo_pods");
+  const [selectedColumn6, setSelectedColumn6] = useState<string>("dealtype");
+  const [selectedColumn7, setSelectedColumn7] = useState<string>("amount_in_home_currency");
+  const [selectedColumn8, setSelectedColumn8] = useState<string>("type_of_sql_associated_to_deal");
+  const [selectedColumn9, setSelectedColumn9] = useState<string>("closedate");
+  const [selectedColumn10, setSelectedColumn10] = useState<string>("dealstage");
   const [columnSearch5, setColumnSearch5] = useState("");
   const [columnSearch6, setColumnSearch6] = useState("");
   const [columnSearch7, setColumnSearch7] = useState("");
   const [columnSearch8, setColumnSearch8] = useState("");
   const [columnSearch9, setColumnSearch9] = useState("");
+  const [columnSearch10, setColumnSearch10] = useState("");
   const [isColumnPopoverOpen5, setIsColumnPopoverOpen5] = useState(false);
   const [isColumnPopoverOpen6, setIsColumnPopoverOpen6] = useState(false);
   const [isColumnPopoverOpen7, setIsColumnPopoverOpen7] = useState(false);
   const [isColumnPopoverOpen8, setIsColumnPopoverOpen8] = useState(false);
   const [isColumnPopoverOpen9, setIsColumnPopoverOpen9] = useState(false);
+  const [isColumnPopoverOpen10, setIsColumnPopoverOpen10] = useState(false);
   const [selectedColumns, setSelectedColumns] = useState<Set<string>>(new Set());
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -124,8 +127,9 @@ export default function CascataTest() {
     if (selectedColumn7) newSet.add(selectedColumn7);
     if (selectedColumn8) newSet.add(selectedColumn8);
     if (selectedColumn9) newSet.add(selectedColumn9);
+    if (selectedColumn10) newSet.add(selectedColumn10);
     setSelectedColumns(newSet);
-  }, [selectedColumn1, selectedColumn2, selectedColumn3, selectedColumn4, selectedColumn5, selectedColumn6, selectedColumn7, selectedColumn8, selectedColumn9]);
+  }, [selectedColumn1, selectedColumn2, selectedColumn3, selectedColumn4, selectedColumn5, selectedColumn6, selectedColumn7, selectedColumn8, selectedColumn9, selectedColumn10]);
 
   // Filter columns based on search
   const filteredColumns = useMemo(() => {
@@ -182,6 +186,12 @@ export default function CascataTest() {
     return allDealColumns.filter((col) => col.toLowerCase().includes(searchLower));
   }, [allDealColumns, columnSearch9]);
 
+  const filteredColumns10 = useMemo(() => {
+    if (!columnSearch10.trim()) return allDealColumns;
+    const searchLower = columnSearch10.toLowerCase();
+    return allDealColumns.filter((col) => col.toLowerCase().includes(searchLower));
+  }, [allDealColumns, columnSearch10]);
+
   const handleColumn1Change = (column: string) => {
     setSelectedColumn1(column === selectedColumn1 ? "" : column);
   };
@@ -216,6 +226,10 @@ export default function CascataTest() {
 
   const handleColumn9Change = (column: string) => {
     setSelectedColumn9(column === selectedColumn9 ? "" : column);
+  };
+
+  const handleColumn10Change = (column: string) => {
+    setSelectedColumn10(column === selectedColumn10 ? "" : column);
   };
 
   const handleRefresh = async () => {
@@ -287,11 +301,12 @@ export default function CascataTest() {
     column2: "admin_pod",
     column3: "sql_type",
     column4: "admin___first_became_an_opportunity_date",
-    column5: "property_deal_geo_pods",
-    column6: "property_dealtype",
-    column7: "property_amount_in_home_currency",
-    column8: "property_type_of_sql_associated_to_deal",
-    column9: "property_closedate",
+    column5: "deal_geo_pods",
+    column6: "dealtype",
+    column7: "amount_in_home_currency",
+    column8: "type_of_sql_associated_to_deal",
+    column9: "closedate",
+    column10: "dealstage",
   };
 
   const isDefaultValue = (columnNum: number, value: string): boolean => {
@@ -1002,22 +1017,75 @@ export default function CascataTest() {
                     </TableCell>
                   </TableRow>
 
-                  {/* Question 10: Deal Won Field (Non-configurable) */}
+                  {/* Question 10: Deal Won Field */}
                   <TableRow>
                     <TableCell className="font-medium">
                       Which field indicates whether a deal has been won?
                     </TableCell>
                     <TableCell>Deals</TableCell>
-                    <TableCell>
-                      {/* Empty - no dropdown for this non-configurable field */}
+                    <TableCell className="text-left">
+                      <Popover open={isColumnPopoverOpen10} onOpenChange={setIsColumnPopoverOpen10}>
+                        <PopoverTrigger asChild>
+                          <Button variant="outline" size="sm" className="w-full justify-start">
+                            <Columns className="h-4 w-4 mr-2" />
+                            {selectedColumn10 ? selectedColumn10 : "Select Column"}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[400px] p-0" align="start">
+                          <div className="p-4 space-y-3">
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium">Search and Select Column</Label>
+                              <Input
+                                placeholder="Search columns..."
+                                value={columnSearch10}
+                                onChange={(e) => setColumnSearch10(e.target.value)}
+                                className="h-9"
+                              />
+                            </div>
+                          </div>
+                          <ScrollArea className="h-[400px]">
+                            <div className="p-2 space-y-1">
+                              <RadioGroup value={selectedColumn10 || ""} onValueChange={handleColumn10Change}>
+                                {filteredColumns10.length > 0 ? (
+                                  filteredColumns10.map((column) => (
+                                    <div
+                                      key={column}
+                                      className="flex items-center space-x-2 p-2 rounded-md hover:bg-accent cursor-pointer"
+                                      onClick={() => handleColumn10Change(column)}
+                                    >
+                                      <RadioGroupItem
+                                        value={column}
+                                        id={`column10-${column}`}
+                                      />
+                                      <label
+                                        htmlFor={`column10-${column}`}
+                                        className="text-sm cursor-pointer flex-1"
+                                      >
+                                        {column}
+                                      </label>
+                                    </div>
+                                  ))
+                                ) : (
+                                  <div className="p-2 text-sm text-muted-foreground text-center">
+                                    {isDealsLoading ? "Loading columns..." : "No columns found"}
+                                  </div>
+                                )}
+                              </RadioGroup>
+                            </div>
+                          </ScrollArea>
+                        </PopoverContent>
+                      </Popover>
                     </TableCell>
                     <TableCell>
-                      <span className="text-xs px-2 py-1 rounded font-medium bg-yellow-400 text-yellow-900 border border-yellow-500 font-mono inline-block">
-                        deal_stage_value
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        (From deal_stage table)
-                      </span>
+                      {selectedColumn10 && (
+                        <span className={`text-xs px-2 py-1 rounded font-medium inline-block ${
+                          isDefaultValue(10, selectedColumn10)
+                            ? "bg-yellow-400 text-yellow-900 border border-yellow-500"
+                            : "text-muted-foreground bg-muted"
+                        }`}>
+                          {selectedColumn10}
+                        </span>
+                      )}
                     </TableCell>
                   </TableRow>
                 </TableBody>

@@ -4,3 +4,4 @@ ALTER TABLE `hubspot_contacts` MODIFY COLUMN `phone` VARCHAR(500) NULL;
 
 
 
+

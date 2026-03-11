@@ -604,11 +604,11 @@ export const appRouter = router({
             .optional()
         )
         .query(async ({ input }) => {
-          const bigqueryPlayground = await import('./bigquery-playground');
+          const hubspot = await import('./hubspot-client');
           const page = input?.page ?? 1;
           const pageSize = input?.pageSize ?? 25;
           const bypassCache = input?.bypassCache ?? false;
-          return await bigqueryPlayground.getHubSpotContacts(page, pageSize, bypassCache);
+          return await hubspot.getHubSpotContacts(page, pageSize, bypassCache);
         }),
 
       cascataTestDeals: publicProcedure
@@ -622,11 +622,11 @@ export const appRouter = router({
             .optional()
         )
         .query(async ({ input }) => {
-          const bigqueryPlayground = await import('./bigquery-playground');
+          const hubspot = await import('./hubspot-client');
           const page = input?.page ?? 1;
           const pageSize = input?.pageSize ?? 25;
           const bypassCache = input?.bypassCache ?? false;
-          return await bigqueryPlayground.getHubSpotDeals(page, pageSize, bypassCache);
+          return await hubspot.getHubSpotDeals(page, pageSize, bypassCache);
         }),
     }),
   }),

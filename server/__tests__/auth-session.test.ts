@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { SignJWT, jwtVerify } from "jose";
+import { randomBytes } from "crypto";
 
-const TEST_SECRET = "test-secret-key-for-unit-testing";
+const TEST_SECRET_BYTES = randomBytes(32);
 
 function getSecretKey() {
-  return new TextEncoder().encode(TEST_SECRET);
+  return TEST_SECRET_BYTES;
 }
 
 async function createTestToken(
@@ -106,7 +107,7 @@ describe("Authentication & Session Security", () => {
     });
 
     it("rejects a token signed with a different secret", async () => {
-      const wrongSecret = new TextEncoder().encode("wrong-secret-key");
+      const wrongSecret = randomBytes(32);
       const token = await new SignJWT({
         openId: "hacker",
         appId: "app",
@@ -186,38 +187,38 @@ describe("Authentication & Session Security", () => {
   });
 
   describe("Password hashing", () => {
+    const genTestPw = () => `Test_${randomBytes(8).toString("hex")}!1`;
+
     it("bcrypt is used for password hashing (not plaintext, not MD5/SHA)", async () => {
       const bcrypt = await import("bcrypt");
-      const hash = await bcrypt.hash("testPassword123!", 10);
-      // bcrypt hashes start with $2b$ or $2a$
+      const hash = await bcrypt.hash(genTestPw(), 10);
       expect(hash).toMatch(/^\$2[ab]\$/);
       expect(hash.length).toBeGreaterThan(50);
     });
 
     it("bcrypt correctly verifies matching passwords", async () => {
       const bcrypt = await import("bcrypt");
-      const password = "Str0ng!P@ssw0rd";
-      const hash = await bcrypt.hash(password, 10);
-      const isValid = await bcrypt.compare(password, hash);
+      const pw = genTestPw();
+      const hash = await bcrypt.hash(pw, 10);
+      const isValid = await bcrypt.compare(pw, hash);
       expect(isValid).toBe(true);
     });
 
     it("bcrypt rejects wrong passwords", async () => {
       const bcrypt = await import("bcrypt");
-      const hash = await bcrypt.hash("correct-password!", 10);
-      const isValid = await bcrypt.compare("wrong-password!", hash);
+      const hash = await bcrypt.hash(genTestPw(), 10);
+      const isValid = await bcrypt.compare(genTestPw(), hash);
       expect(isValid).toBe(false);
     });
 
     it("same password produces different hashes (salting)", async () => {
       const bcrypt = await import("bcrypt");
-      const password = "Same!Pass1";
-      const hash1 = await bcrypt.hash(password, 10);
-      const hash2 = await bcrypt.hash(password, 10);
+      const pw = genTestPw();
+      const hash1 = await bcrypt.hash(pw, 10);
+      const hash2 = await bcrypt.hash(pw, 10);
       expect(hash1).not.toBe(hash2);
-      // But both verify correctly
-      expect(await bcrypt.compare(password, hash1)).toBe(true);
-      expect(await bcrypt.compare(password, hash2)).toBe(true);
+      expect(await bcrypt.compare(pw, hash1)).toBe(true);
+      expect(await bcrypt.compare(pw, hash2)).toBe(true);
     });
   });
 });

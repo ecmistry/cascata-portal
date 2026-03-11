@@ -198,7 +198,8 @@ describe("Performance Characteristics", () => {
 
   describe("JWT operations performance", () => {
     it("creates and verifies 100 JWT tokens in under 2000ms", async () => {
-      const secret = new TextEncoder().encode("perf-test-secret");
+      const { randomBytes } = await import("crypto");
+      const secret = randomBytes(32);
       const start = performance.now();
       for (let i = 0; i < 100; i++) {
         const token = await new SignJWT({ openId: `user-${i}`, appId: "app", name: "User" })

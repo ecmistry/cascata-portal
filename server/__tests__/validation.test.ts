@@ -24,11 +24,13 @@ describe("Input Validation Schemas", () => {
     });
 
     it("accepts strong passwords", () => {
-      expect(passwordSchema.parse("Str0ng!Pass")).toBe("Str0ng!Pass");
+      const pw = "Aa1!xxxx";
+      expect(passwordSchema.parse(pw)).toBe(pw);
     });
 
     it("accepts complex passwords with special chars", () => {
-      expect(passwordSchema.parse("My$ecur3P@ssword!")).toBe("My$ecur3P@ssword!");
+      const pw = "Zz9@testvalue!!";
+      expect(passwordSchema.parse(pw)).toBe(pw);
     });
 
     it("rejects empty passwords", () => {

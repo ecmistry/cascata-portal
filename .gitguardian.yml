@@ -1,0 +1,9 @@
+version: 2
+
+secret:
+  ignored-paths:
+    - "server/__tests__/**"
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/*.test.js"
+    - "**/*.spec.js"

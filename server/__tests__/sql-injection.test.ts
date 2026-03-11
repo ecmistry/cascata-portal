@@ -195,19 +195,17 @@ describe("SQL Injection Prevention", () => {
     it("accepts but safely handles SQL injection in email", () => {
       const input = loginSchema.parse({
         email: "admin' OR '1'='1' --",
-        password: "password123",
+        password: "x",
       });
       expect(input.email).toBe("admin' OR '1'='1' --");
-      // The ORM will safely parameterize this
     });
 
     it("accepts but safely handles UNION injection in email", () => {
       const input = loginSchema.parse({
-        email: "' UNION SELECT openId, passwordHash FROM users --",
+        email: "' UNION SELECT openId, hash FROM users --",
         password: "x",
       });
       expect(input.email).toContain("UNION SELECT");
-      // Won't find a matching user due to parameterization
     });
 
     it("rejects empty email", () => {

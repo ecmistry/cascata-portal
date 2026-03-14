@@ -277,6 +277,17 @@ export async function getCompanyById(id: number) {
   );
 }
 
+export async function updateSyncConfig(companyId: number, config: import("../drizzle/schema").SyncConfig) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(companies).set({ syncConfig: JSON.stringify(config) }).where(eq(companies.id, companyId));
+}
+
+export function parseSyncConfig(company: { syncConfig?: string | null }): import("../drizzle/schema").SyncConfig | null {
+  if (!company.syncConfig) return null;
+  try { return JSON.parse(company.syncConfig); } catch { return null; }
+}
+
 // ============================================================================
 // Region Management
 // ============================================================================

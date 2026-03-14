@@ -6,6 +6,7 @@ import { createServer as createHttpsServer } from "https";
 import { readFileSync } from "fs";
 import { existsSync } from "fs";
 import net from "net";
+import bcrypt from "bcrypt";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
 import { appRouter } from "../routers";
@@ -15,6 +16,7 @@ import { loginRateLimiter, apiRateLimiter } from "./rateLimit";
 import { securityHeaders } from "./securityHeaders";
 import { csrfProtection } from "./csrf";
 import { requestId } from "./requestId";
+import * as db from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -33,6 +35,27 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
     }
   }
   throw new Error(`No available port found starting from ${startPort}`);
+}
+
+async function syncAdminFromEnv() {
+  const username = process.env.ADMIN_USERNAME;
+  const password = process.env.ADMIN_PASSWORD;
+  if (!username || !password) return;
+
+  try {
+    const hash = await bcrypt.hash(password, 10);
+    await db.upsertUser({
+      openId: "simple-login-admin",
+      name: "Admin",
+      email: username,
+      passwordHash: hash,
+      role: "admin",
+      loginMethod: "simple",
+    });
+    console.log("[Auth] Admin credentials synced from .env");
+  } catch (err) {
+    console.error("[Auth] Failed to sync admin credentials:", err instanceof Error ? err.message : err);
+  }
 }
 
 async function startServer() {
@@ -115,6 +138,8 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  await syncAdminFromEnv();
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

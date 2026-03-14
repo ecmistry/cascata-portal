@@ -21,13 +21,12 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, Plus, FolderOpen, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight, Database } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen } from "lucide-react";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
-import type { Company } from "@/types/api";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 240; /* Narrower sidebar for cleaner look */
@@ -143,7 +142,7 @@ function DashboardLayoutContent({
   
   // Auto-expand settings if on a settings page
   useEffect(() => {
-    if (location === "/portal-stats" || location === "/change-history") {
+    if (location === "/portal-stats" || location === "/change-history" || location === "/how-it-works") {
       setSettingsExpanded(true);
     }
   }, [location]);
@@ -152,6 +151,13 @@ function DashboardLayoutContent({
   const { data: companies = [], isLoading: companiesLoading } = trpc.company.list.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  const companyId = companies[0]?.id ?? 1;
+  const { data: cascadeSheetsData, isLoading: cascadeSheetsLoading } = trpc.cascade.availableSheets.useQuery(
+    { companyId },
+    { enabled: isAuthenticated },
+  );
+  const cascadeSheets = cascadeSheetsData?.sheets ?? [];
   
   // Get current model ID from URL if on model page
   const currentModelId = location.startsWith("/model/") 
@@ -249,60 +255,49 @@ function DashboardLayoutContent({
               </SidebarMenu>
             </div>
 
-            {/* Create New Model Button */}
-            <div className="px-2 py-2 border-b border-sidebar-border">
-              <Button
-                onClick={() => setLocation("/setup")}
-                className="w-full h-9 text-sm font-normal justify-start gap-2"
-                variant="default"
-              >
-                <Plus className="h-4 w-4" />
-                <span>Create New Model</span>
-              </Button>
-            </div>
-            
-            {/* Models List */}
+            {/* Cascade Sheets - Dynamically generated from available data */}
             <div className="flex-1 overflow-y-auto">
               <div className="px-2 py-2">
                 <div className="px-2 py-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  {isCollapsed ? "" : "Your Models"}
+                  {isCollapsed ? "" : "Cascade Sheets"}
                 </div>
               </div>
               <SidebarMenu className="px-2 py-1">
-                {companiesLoading ? (
+                {cascadeSheets.length === 0 && !cascadeSheetsLoading && (
                   <SidebarMenuItem>
                     <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      Loading...
+                      {isCollapsed ? "" : "No data yet"}
                     </div>
                   </SidebarMenuItem>
-                ) : companies.length === 0 ? (
-                  <SidebarMenuItem>
-                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
-                      {isCollapsed ? "" : "No models yet"}
-                    </div>
-                  </SidebarMenuItem>
-                ) : (
-                  companies.map((company: Company) => {
-                    const isActive = currentModelId === company.id;
-                    return (
-                      <SidebarMenuItem key={company.id}>
-                        <SidebarMenuButton
-                          isActive={isActive}
-                          onClick={() => setLocation(`/model/${company.id}`)}
-                          tooltip={company.name}
-                          className={`h-9 transition-all font-normal text-sm ${
-                            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
-                          }`}
-                        >
-                          <FolderOpen
-                            className={`h-4 w-4 ${isActive ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
-                          />
-                          <span className={isActive ? "font-medium" : ""}>{company.name}</span>
-                        </SidebarMenuButton>
-                      </SidebarMenuItem>
-                    );
-                  })
                 )}
+                {cascadeSheetsLoading && (
+                  <SidebarMenuItem>
+                    <div className="px-2 py-1.5 text-sm text-muted-foreground">
+                      {isCollapsed ? "" : "Loading..."}
+                    </div>
+                  </SidebarMenuItem>
+                )}
+                {cascadeSheets.map((sheet) => {
+                  const path = `/cascade/${sheet.motion}/${sheet.region}`;
+                  const isActive = location === path;
+                  return (
+                    <SidebarMenuItem key={path}>
+                      <SidebarMenuButton
+                        isActive={isActive}
+                        onClick={() => setLocation(path)}
+                        tooltip={sheet.label}
+                        className={`h-8 transition-all font-normal text-sm ${
+                          isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                        }`}
+                      >
+                        <Layers
+                          className={`h-4 w-4 ${isActive ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                        />
+                        <span className={isActive ? "font-medium" : ""}>{sheet.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  );
+                })}
               </SidebarMenu>
             </div>
 
@@ -355,6 +350,21 @@ function DashboardLayoutContent({
                       <span className={location === "/change-history" ? "font-medium" : ""}>Change History</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/how-it-works"}
+                      onClick={() => setLocation("/how-it-works")}
+                      tooltip="Documentation"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/how-it-works" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <BookOpen
+                        className={`h-4 w-4 ${location === "/how-it-works" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                      <span className={location === "/how-it-works" ? "font-medium" : ""}>Documentation</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                 </SidebarMenu>
               )}
               {isCollapsed && (
@@ -384,6 +394,20 @@ function DashboardLayoutContent({
                     >
                       <History
                         className={`h-4 w-4 ${location === "/change-history" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/how-it-works"}
+                      onClick={() => setLocation("/how-it-works")}
+                      tooltip="Documentation"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/how-it-works" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <BookOpen
+                        className={`h-4 w-4 ${location === "/how-it-works" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
                       />
                     </SidebarMenuButton>
                   </SidebarMenuItem>

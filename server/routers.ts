@@ -630,6 +630,95 @@ export const appRouter = router({
         }),
     }),
   }),
+
+  cascade: router({
+    getSyncConfig: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const company = await db.getCompanyById(input.companyId);
+        if (!company) throw new TRPCError({ code: "NOT_FOUND", message: "Company not found" });
+        const config = db.parseSyncConfig(company);
+        return config ?? {
+          contactSqlDateProperty: "admin___first_became_a_sql_date",
+          contactRegionProperty: "contact_pod",
+          contactSqlTypeProperty: "type_of_sql",
+          contactOppDateProperty: "admin___first_became_an_opportunity_date",
+          dealRegionProperty: "deal_pod",
+          dealSqlTypeProperty: "type_of_sql_associated_to_deal",
+          dealAmountProperty: "amount",
+          dealCloseDateProperty: "closedate",
+          closedWonStageIds: ["closedwon", "19291292", "96740205"],
+          newDealTypeValues: ["newbusiness"],
+          upsellDealTypeValues: ["existingbusiness", "customerrenewal"],
+        };
+      }),
+
+    saveSyncConfig: protectedProcedure
+      .input(z.object({
+        companyId: z.number().int().min(1),
+        config: z.object({
+          contactSqlDateProperty: z.string().min(1),
+          contactRegionProperty: z.string().min(1),
+          contactSqlTypeProperty: z.string().min(1),
+          contactOppDateProperty: z.string().min(1),
+          dealRegionProperty: z.string().min(1),
+          dealSqlTypeProperty: z.string().min(1),
+          dealAmountProperty: z.string().min(1),
+          dealCloseDateProperty: z.string().min(1),
+          closedWonStageIds: z.array(z.string()).min(1),
+          newDealTypeValues: z.array(z.string()),
+          upsellDealTypeValues: z.array(z.string()),
+        }),
+      }))
+      .mutation(async ({ input }) => {
+        await db.updateSyncConfig(input.companyId, input.config);
+        return { success: true };
+      }),
+
+    sheet: protectedProcedure
+      .input(z.object({
+        companyId: z.number().int().min(1),
+        motion: z.string().min(1),
+        region: z.string().min(1),
+      }))
+      .query(async ({ input }) => {
+        const { calculateCascadeSheet } = await import("./cascadeSheet");
+        const regionNames = input.region.split("+");
+        return await calculateCascadeSheet(input.companyId, input.motion, regionNames);
+      }),
+
+    availableSheets: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const sqlTypes = await db.getSqlTypesByCompany(input.companyId);
+        const regions = await db.getRegionsByCompany(input.companyId);
+        const history = await db.getSqlHistoryByCompany(input.companyId);
+
+        const combosWithData = new Set<string>();
+        for (const h of history) {
+          if ((h.volume ?? 0) > 0) combosWithData.add(`${h.sqlTypeId}|${h.regionId}`);
+        }
+
+        const sheets: Array<{ motion: string; motionDisplay: string; region: string; regionDisplay: string; label: string }> = [];
+        for (const st of sqlTypes) {
+          for (const r of regions) {
+            if (combosWithData.has(`${st.id}|${r.id}`)) {
+              const motionDisplay = st.displayName || st.name;
+              const regionDisplay = r.displayName || r.name;
+              sheets.push({
+                motion: st.name,
+                motionDisplay,
+                region: r.name,
+                regionDisplay,
+                label: `${motionDisplay} ${regionDisplay}`,
+              });
+            }
+          }
+        }
+
+        return { sheets };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

@@ -36,12 +36,30 @@ export const companies = mysqlTable("companies", {
   bigqueryConversionRatesTable: varchar("bigqueryConversionRatesTable", { length: 255 }),
   bigqueryActualsTable: varchar("bigqueryActualsTable", { length: 255 }),
   bigqueryLastSync: timestamp("bigqueryLastSync"),
+  syncConfig: text("syncConfig"), // JSON: HubSpot property mapping configuration
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = typeof companies.$inferInsert;
+
+/**
+ * Sync configuration stored as JSON in companies.syncConfig
+ */
+export interface SyncConfig {
+  contactSqlDateProperty: string;
+  contactRegionProperty: string;
+  contactSqlTypeProperty: string;
+  contactOppDateProperty: string;
+  dealRegionProperty: string;
+  dealSqlTypeProperty: string;
+  dealAmountProperty: string;
+  dealCloseDateProperty: string;
+  closedWonStageIds: string[];
+  newDealTypeValues: string[];
+  upsellDealTypeValues: string[];
+}
 
 /**
  * Geographic regions for each company

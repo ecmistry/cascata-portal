@@ -2,6 +2,32 @@
 
 Safe commits to revert to if a future feature introduces issues.
 
+## `ee56248` — Pre-Cascade Sheet Redesign (2026-03-14)
+
+**What's included at this point:**
+- Everything from `4dd5775` plus:
+- Full data quality tracking system with waterfall data flow view
+- HubSpot alignment fix (HAS_PROPERTY filter, lifecycle stage removal)
+- Deal skip reason tracking, date anomalies, timing gaps, sparse combinations
+- Discrepancy explanation section on Data Quality page
+- Optimized deal fetch (closed-won only)
+- 398 tests across 17 test files (all passing)
+- CHANGELOG at v1.5.0
+
+**How to revert:**
+```bash
+git reset --hard ee56248
+git push --force origin main
+```
+
+**Why this is a safe point:**
+- All tests pass, portal built and deployed successfully
+- HubSpot data aligned (2,268 contacts match HubSpot report)
+- Data quality system fully operational
+- Clean state before cascade sheet redesign
+
+---
+
 ## `4dd5775` — Pre-Data Quality Feature (2026-03-14)
 
 **What's included at this point:**

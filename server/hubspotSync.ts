@@ -732,6 +732,59 @@ export async function syncFromHubSpot(
 
   console.log(`[HubSpot Sync] Upserted ${stats.timingDistributionsUpserted} timing distributions (from ${timingBuckets.size} SQL types with data)`);
 
+  // ── Calculate Opp→Deal win timing distribution from deal create→close ──
+
+  console.log("[HubSpot Sync] Calculating opp→deal win timing distributions...");
+
+  const oppTimingBuckets = new Map<number, Map<number, number>>(); // sqlTypeId → (quarterOffset → count)
+
+  for (const d of deals) {
+    const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    if (!sqlType || !sqlTypeByName.has(sqlType)) continue;
+    const sqlTypeId = sqlTypeByName.get(sqlType)!;
+
+    const createDateRaw = d.properties[cfg.dealCreatedDateProperty] || d.properties.createdate;
+    const closeDateRaw = d.properties[cfg.dealCloseDateProperty];
+    if (!createDateRaw || !closeDateRaw) continue;
+
+    const createDate = new Date(createDateRaw);
+    const closeDate = new Date(closeDateRaw);
+    if (isNaN(createDate.getTime()) || isNaN(closeDate.getTime())) continue;
+
+    const createQtr = Math.ceil((createDate.getMonth() + 1) / 3);
+    const createYear = createDate.getFullYear();
+    const closeQtr = Math.ceil((closeDate.getMonth() + 1) / 3);
+    const closeYear = closeDate.getFullYear();
+    const qtrOffset = Math.max(0, (closeYear - createYear) * 4 + (closeQtr - createQtr));
+
+    if (!oppTimingBuckets.has(sqlTypeId)) oppTimingBuckets.set(sqlTypeId, new Map());
+    const buckets = oppTimingBuckets.get(sqlTypeId)!;
+    buckets.set(qtrOffset, (buckets.get(qtrOffset) || 0) + 1);
+  }
+
+  for (const [sqlTypeId, buckets] of oppTimingBuckets) {
+    const total = Array.from(buckets.values()).reduce((s, v) => s + v, 0);
+    if (total < 5) continue;
+
+    const maxOffset = Math.min(Math.max(...buckets.keys()), 7);
+    const probs: number[] = [];
+    for (let i = 0; i <= maxOffset; i++) {
+      probs.push(Math.round(((buckets.get(i) || 0) / total) * 10000) / 10000);
+    }
+    // Normalize so they sum to 1
+    const probSum = probs.reduce((s, v) => s + v, 0);
+    if (probSum > 0) {
+      for (let i = 0; i < probs.length; i++) probs[i] = Math.round((probs[i] / probSum) * 10000) / 10000;
+    }
+
+    try {
+      await db.updateOppTiming(companyId, sqlTypeId, JSON.stringify(probs));
+    } catch (err) {
+      stats.errors.push(`Opp timing upsert (type ${sqlTypeId}): ${err instanceof Error ? err.message : err}`);
+    }
+  }
+  console.log(`[HubSpot Sync] Calculated opp timing for ${oppTimingBuckets.size} SQL types`);
+
   // ── Detect sparse region/motion combinations ──────────────────────
   const comboCounts = new Map<string, number>();
   for (const [key, count] of sqlVolumes) {

@@ -169,6 +169,7 @@ export const timeDistributions = mysqlTable("timeDistributions", {
   sameQuarterPct: int("sameQuarterPct").notNull().default(8900), // 89% = 8900 basis points
   nextQuarterPct: int("nextQuarterPct").notNull().default(1000), // 10% = 1000 basis points
   twoQuarterPct: int("twoQuarterPct").notNull().default(100), // 1% = 100 basis points
+  oppTimingJson: text("oppTimingJson"), // JSON array of opp→deal win timing probabilities e.g. [0.14,0.33,0.25,0.15,0.07,0.04,0.02]
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

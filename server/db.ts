@@ -587,6 +587,19 @@ export async function upsertTimeDistribution(data: InsertTimeDistribution) {
   });
 }
 
+export async function updateOppTiming(companyId: number, sqlTypeId: number, oppTimingJson: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(timeDistributions)
+    .set({ oppTimingJson, updatedAt: new Date() })
+    .where(
+      and(
+        eq(timeDistributions.companyId, companyId),
+        eq(timeDistributions.sqlTypeId, sqlTypeId),
+      )
+    );
+}
+
 /**
  * Get time distributions for a company
  * @param companyId - Company ID

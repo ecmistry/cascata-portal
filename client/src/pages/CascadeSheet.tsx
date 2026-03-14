@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useEffect, useCallback } from "react";
+import { useMemo, useState, useRef, useCallback } from "react";
 import { useParams, useLocation, Redirect } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { TrendingUp, Percent, DollarSign, Target, AlertCircle, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
+import { TrendingUp, Percent, DollarSign, Target, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type QLabel = { year: number; quarter: number; label: string };
@@ -103,11 +103,6 @@ function DataCoverageBadge({ dq }: { dq: DqData }) {
       </Tooltip>
     </TooltipProvider>
   );
-}
-
-function getYearOptions(quarters: Array<{ year: number }>): number[] {
-  const years = new Set(quarters.map(q => q.year));
-  return Array.from(years).sort();
 }
 
 // The column width for quarter cells (px)
@@ -376,24 +371,91 @@ export default function CascadeSheet() {
 
   const { data: dqData } = trpc.cascade.dataQuality.useQuery({ companyId });
 
-  const yearOptions = useMemo(() => {
+  // Quarter range filter state ("all" = show everything)
+  const [startQKey, setStartQKey] = useState<string>("all");
+  const [endQKey, setEndQKey] = useState<string>("all");
+
+  // All quarter options for the dropdowns
+  const quarterOptions = useMemo(() => {
     if (!cascadeData) return [];
-    return getYearOptions(cascadeData.quarterColumns);
+    return cascadeData.quarterColumns.map((q: QLabel) => ({
+      key: `${q.year}-${q.quarter}`,
+      label: q.label,
+    }));
   }, [cascadeData]);
 
-  const currentYear = new Date().getFullYear();
-  const [selectedYear, setSelectedYear] = useState<number | null>(null);
+  // Filtered quarter columns based on start/end selection
+  const filteredQuarters = useMemo(() => {
+    if (!cascadeData) return [];
+    const all = cascadeData.quarterColumns;
+    if (startQKey === "all" && endQKey === "all") return all;
 
-  const activeYear = useMemo(() => {
-    if (selectedYear !== null) return selectedYear;
-    if (!cascadeData) return currentYear;
-    const yearsWithData = cascadeData.rows
-      .filter(r => r.sqls > 0)
-      .map(r => r.quarter.year);
-    if (yearsWithData.length === 0) return currentYear;
-    const latestDataYear = Math.max(...yearsWithData);
-    return yearOptions.includes(currentYear) ? currentYear : latestDataYear;
-  }, [selectedYear, cascadeData, yearOptions, currentYear]);
+    let startIdx = 0;
+    let endIdx = all.length - 1;
+
+    if (startQKey !== "all") {
+      const [sy, sq] = startQKey.split("-").map(Number);
+      const idx = all.findIndex((q: QLabel) => q.year === sy && q.quarter === sq);
+      if (idx !== -1) startIdx = idx;
+    }
+    if (endQKey !== "all") {
+      const [ey, eq] = endQKey.split("-").map(Number);
+      const idx = all.findIndex((q: QLabel) => q.year === ey && q.quarter === eq);
+      if (idx !== -1) endIdx = idx;
+    }
+
+    if (startIdx > endIdx) [startIdx, endIdx] = [endIdx, startIdx];
+    return all.slice(startIdx, endIdx + 1);
+  }, [cascadeData, startQKey, endQKey]);
+
+  // Recalculate totals for the filtered range
+  const filteredSqlTotals = useMemo(() => {
+    if (!cascadeData || filteredQuarters.length === 0) return [];
+    const allQ = cascadeData.quarterColumns;
+    return filteredQuarters.map((fq: QLabel) => {
+      const globalIdx = allQ.findIndex((q: QLabel) => q.year === fq.year && q.quarter === fq.quarter);
+      return cascadeData.totalOppsPerQuarter[globalIdx] || 0;
+    });
+  }, [cascadeData, filteredQuarters]);
+
+  const filteredOppTotals = useMemo(() => {
+    if (!cascadeData || filteredQuarters.length === 0) return [];
+    const allQ = cascadeData.quarterColumns;
+    return filteredQuarters.map((fq: QLabel) => {
+      const globalIdx = allQ.findIndex((q: QLabel) => q.year === fq.year && q.quarter === fq.quarter);
+      return cascadeData.totalWonPerQuarter[globalIdx] || 0;
+    });
+  }, [cascadeData, filteredQuarters]);
+
+  // Remap cascade values to the filtered column indices
+  const filteredSqlRows = useMemo(() => {
+    if (!cascadeData) return [];
+    const allQ = cascadeData.quarterColumns;
+    const globalIndices = filteredQuarters.map((fq: QLabel) =>
+      allQ.findIndex((q: QLabel) => q.year === fq.year && q.quarter === fq.quarter)
+    );
+    return cascadeData.rows.map(r => ({
+      quarter: r.quarter,
+      inputValue: r.sqls,
+      inputLabel: "SQLs",
+      conversionRate: r.conversionRate,
+      cascadeValues: globalIndices.map(gi => r.cascadeValues[gi] || 0),
+    }));
+  }, [cascadeData, filteredQuarters]);
+
+  const filteredOppRows = useMemo(() => {
+    if (!cascadeData) return [];
+    const allQ = cascadeData.quarterColumns;
+    const globalIndices = filteredQuarters.map((fq: QLabel) =>
+      allQ.findIndex((q: QLabel) => q.year === fq.year && q.quarter === fq.quarter)
+    );
+    return cascadeData.oppRows.map(r => ({
+      quarter: r.quarter,
+      inputValue: r.opps,
+      inputLabel: "Opps",
+      cascadeValues: globalIndices.map(gi => r.cascadeValues[gi] || 0),
+    }));
+  }, [cascadeData, filteredQuarters]);
 
   // Scroll refs for synchronized scrolling between panels
   const sqlScrollRef = useRef<HTMLDivElement>(null);
@@ -417,43 +479,6 @@ export default function CascadeSheet() {
     }
     requestAnimationFrame(() => { isScrolling.current = false; });
   }, []);
-
-  // Scroll to the selected year when it changes
-  useEffect(() => {
-    if (!cascadeData) return;
-    const idx = cascadeData.quarterColumns.findIndex(
-      (q: QLabel) => q.year === activeYear && q.quarter === 1
-    );
-    if (idx === -1) return;
-    const fixedCols = LABEL_COL_W + SQLS_COL_W + CONV_COL_W;
-    const scrollPos = idx * COL_W - 20;
-    setTimeout(() => {
-      sqlScrollRef.current?.scrollTo({ left: scrollPos, behavior: "smooth" });
-      oppScrollRef.current?.scrollTo({ left: scrollPos, behavior: "smooth" });
-    }, 100);
-  }, [activeYear, cascadeData]);
-
-  // Build panel data
-  const sqlPanelRows = useMemo(() => {
-    if (!cascadeData) return [];
-    return cascadeData.rows.map(r => ({
-      quarter: r.quarter,
-      inputValue: r.sqls,
-      inputLabel: "SQLs",
-      conversionRate: r.conversionRate,
-      cascadeValues: r.cascadeValues,
-    }));
-  }, [cascadeData]);
-
-  const oppPanelRows = useMemo(() => {
-    if (!cascadeData) return [];
-    return cascadeData.oppRows.map(r => ({
-      quarter: r.quarter,
-      inputValue: r.opps,
-      inputLabel: "Opps",
-      cascadeValues: r.cascadeValues,
-    }));
-  }, [cascadeData]);
 
   if (isLoading || companiesLoading || sheetsLoading) {
     return (
@@ -515,8 +540,7 @@ export default function CascadeSheet() {
   }
 
   const sheetKey = `${motion}/${region}`;
-  const canGoPrev = yearOptions.indexOf(activeYear) > 0;
-  const canGoNext = yearOptions.indexOf(activeYear) < yearOptions.length - 1;
+  const isFiltered = startQKey !== "all" || endQKey !== "all";
 
   return (
     <DashboardLayout>
@@ -534,12 +558,14 @@ export default function CascadeSheet() {
               {cascadeData.motionDisplay} motion &middot; {cascadeData.regionDisplay}
             </p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3">
+
+          {/* Controls row */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center flex-wrap">
             <Select
               value={sheetKey}
               onValueChange={(v) => setLocation(`/cascade/${v}`)}
             >
-              <SelectTrigger className="w-full sm:w-[280px]">
+              <SelectTrigger className="w-full sm:w-[260px]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -551,49 +577,47 @@ export default function CascadeSheet() {
               </SelectContent>
             </Select>
 
-            {/* Year Navigator */}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                disabled={!canGoPrev}
-                onClick={() => {
-                  const idx = yearOptions.indexOf(activeYear);
-                  if (idx > 0) setSelectedYear(yearOptions[idx - 1]);
-                }}
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <Select
-                value={String(activeYear)}
-                onValueChange={(v) => setSelectedYear(Number(v))}
-              >
-                <SelectTrigger className="w-[100px]">
+            {/* Quarter Range Filter */}
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">From:</span>
+              <Select value={startQKey} onValueChange={setStartQKey}>
+                <SelectTrigger className="w-[105px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {yearOptions.map(y => (
-                    <SelectItem key={y} value={String(y)}>
-                      {y}
-                    </SelectItem>
+                  <SelectItem value="all">All</SelectItem>
+                  {quarterOptions.map(qo => (
+                    <SelectItem key={`from-${qo.key}`} value={qo.key}>{qo.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <Button
-                variant="outline"
-                size="icon"
-                className="h-9 w-9"
-                disabled={!canGoNext}
-                onClick={() => {
-                  const idx = yearOptions.indexOf(activeYear);
-                  if (idx < yearOptions.length - 1) setSelectedYear(yearOptions[idx + 1]);
-                }}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-              <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
-                Scroll to year
+
+              <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">To:</span>
+              <Select value={endQKey} onValueChange={setEndQKey}>
+                <SelectTrigger className="w-[105px] h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All</SelectItem>
+                  {quarterOptions.map(qo => (
+                    <SelectItem key={`to-${qo.key}`} value={qo.key}>{qo.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {isFiltered && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-9 text-xs"
+                  onClick={() => { setStartQKey("all"); setEndQKey("all"); }}
+                >
+                  Reset
+                </Button>
+              )}
+
+              <span className="text-[10px] text-muted-foreground hidden md:inline">
+                {filteredQuarters.length} of {cascadeData.quarterColumns.length} quarters
               </span>
             </div>
           </div>
@@ -649,9 +673,9 @@ export default function CascadeSheet() {
             title="SQL &rarr; Opportunity Cascade"
             subtitle="How SQLs convert to opportunities over time (left of red bar)"
             probabilities={cascadeData.sqlProbabilities}
-            quarters={cascadeData.quarterColumns}
-            rows={sqlPanelRows}
-            totals={cascadeData.totalOppsPerQuarter}
+            quarters={filteredQuarters}
+            rows={filteredSqlRows}
+            totals={filteredSqlTotals}
             showSqlsCols={true}
             variant="sql"
             scrollRef={sqlScrollRef}
@@ -662,9 +686,9 @@ export default function CascadeSheet() {
             title="Opportunity &rarr; Deal Win Cascade"
             subtitle="How opportunities convert to won deals over time (right of red bar)"
             probabilities={cascadeData.oppProbabilities}
-            quarters={cascadeData.quarterColumns}
-            rows={oppPanelRows}
-            totals={cascadeData.totalWonPerQuarter}
+            quarters={filteredQuarters}
+            rows={filteredOppRows}
+            totals={filteredOppTotals}
             showSqlsCols={false}
             variant="opp"
             scrollRef={oppScrollRef}

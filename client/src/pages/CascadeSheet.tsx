@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useLocation, Redirect } from "wouter";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
@@ -15,6 +15,8 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TrendingUp, Percent, DollarSign, Target, AlertCircle, AlertTriangle, CheckCircle2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+type QLabel = { year: number; quarter: number; label: string };
 
 function fmt(n: number, decimals = 1): string {
   if (n === 0) return "";
@@ -103,10 +105,245 @@ function DataCoverageBadge({ dq }: { dq: DqData }) {
   );
 }
 
-// Year options for the 4-quarter selector
 function getYearOptions(quarters: Array<{ year: number }>): number[] {
   const years = new Set(quarters.map(q => q.year));
   return Array.from(years).sort();
+}
+
+// The column width for quarter cells (px)
+const COL_W = 58;
+const LABEL_COL_W = 64;
+const SQLS_COL_W = 48;
+const CONV_COL_W = 44;
+
+/**
+ * CascadePanel renders a single cascade panel (SQL or Opp) in the Excel format:
+ *   Top section: Diagonal probability matrix (yellow/neutral bg)
+ *   Separator:   Cyan header row
+ *   Bottom:      Cascade data rows
+ *   Footer:      Cyan totals row
+ */
+function CascadePanel({
+  title,
+  subtitle,
+  probabilities,
+  quarters,
+  rows,
+  totals,
+  showSqlsCols,
+  variant,
+  scrollRef,
+  onScroll,
+}: {
+  title: string;
+  subtitle: string;
+  probabilities: number[];
+  quarters: QLabel[];
+  rows: Array<{
+    quarter: QLabel;
+    inputValue: number;
+    inputLabel: string;
+    conversionRate?: number;
+    cascadeValues: number[];
+  }>;
+  totals: number[];
+  showSqlsCols: boolean;
+  variant: "sql" | "opp";
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  onScroll: () => void;
+}) {
+  const isSql = variant === "sql";
+  const probBg = isSql ? "bg-yellow-50/60" : "bg-gray-50/60";
+  const diagColor = isSql ? "bg-blue-100 text-blue-900" : "bg-emerald-100 text-emerald-900";
+  const diagFaintColor = isSql ? "bg-blue-50/70 text-blue-700" : "bg-emerald-50/70 text-emerald-700";
+  const labelBg = isSql ? "bg-yellow-50/50 text-yellow-900" : "bg-cyan-50/50 text-cyan-900";
+  const headerBg = "bg-cyan-100/70";
+  const totalBg = "bg-cyan-100/70";
+
+  // Only show rows that have data or have cascade values
+  const visibleRows = rows.filter(
+    r => r.inputValue > 0 || r.cascadeValues.some(v => v > 0)
+  );
+
+  // Only show prob matrix rows that overlap with the quarter columns
+  const probMatrixRows = quarters.filter((_q: QLabel, idx: number) => {
+    for (let p = 0; p < probabilities.length; p++) {
+      if (idx + p < quarters.length) return true;
+    }
+    return false;
+  });
+
+  return (
+    <Card className={`overflow-hidden ${!isSql ? "border-l-4 border-l-red-500" : ""}`}>
+      <CardHeader className={`pb-2 border-b ${isSql ? "bg-amber-50/50" : "bg-red-50/30"}`}>
+        <CardTitle className="text-sm font-semibold flex items-center justify-between">
+          <span dangerouslySetInnerHTML={{ __html: title }} />
+          <Badge variant="outline" className="text-[10px] font-normal">
+            {isSql ? "SQL Cascade" : "Opp Cascade"}
+          </Badge>
+        </CardTitle>
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div
+          className="overflow-x-auto"
+          ref={scrollRef}
+          onScroll={onScroll}
+        >
+          <table className="text-[9px] sm:text-[10px] border-collapse" style={{ minWidth: LABEL_COL_W + (showSqlsCols ? SQLS_COL_W + CONV_COL_W : SQLS_COL_W) + quarters.length * COL_W }}>
+            {/* ── Top Section: Probability Matrix (diagonal staircase) ── */}
+            <thead>
+              <tr className={probBg}>
+                <th className={`sticky left-0 z-10 text-left p-1 font-semibold border-r ${probBg}`} style={{ minWidth: LABEL_COL_W }}>
+                  Probability
+                </th>
+                {showSqlsCols && (
+                  <>
+                    <th className={`p-1 border-r ${probBg}`} style={{ minWidth: SQLS_COL_W }}></th>
+                    <th className={`p-1 border-r ${probBg}`} style={{ minWidth: CONV_COL_W }}></th>
+                  </>
+                )}
+                {!showSqlsCols && (
+                  <th className={`p-1 border-r ${probBg}`} style={{ minWidth: SQLS_COL_W }}></th>
+                )}
+                {quarters.map((q: QLabel) => (
+                  <th key={`ph-${q.label}`} className={`text-right p-1 font-semibold border-r last:border-r-0 ${probBg}`} style={{ minWidth: COL_W }}>
+                    {q.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {probMatrixRows.map((rowQ: QLabel, rowIdx: number) => (
+                <tr key={`prob-${rowQ.label}`} className={`border-t ${probBg}`}>
+                  <td className={`sticky left-0 z-10 p-1 font-medium border-r ${labelBg}`} style={{ minWidth: LABEL_COL_W }}>
+                    {rowQ.label}
+                  </td>
+                  {showSqlsCols && (
+                    <>
+                      <td className={`p-1 border-r ${probBg}`}></td>
+                      <td className={`p-1 border-r ${probBg}`}></td>
+                    </>
+                  )}
+                  {!showSqlsCols && (
+                    <td className={`p-1 border-r ${probBg}`}></td>
+                  )}
+                  {quarters.map((_colQ: QLabel, colIdx: number) => {
+                    const offset = colIdx - rowIdx;
+                    const isProb = offset >= 0 && offset < probabilities.length;
+                    const probVal = isProb ? probabilities[offset] : 0;
+                    const isFirst = offset === 0;
+
+                    return (
+                      <td
+                        key={`prob-${rowQ.label}-${_colQ.label}`}
+                        className={`text-right p-1 font-mono border-r last:border-r-0 ${
+                          isFirst && probVal > 0 ? diagColor + " font-semibold" :
+                          isProb && probVal > 0 ? diagFaintColor :
+                          probBg
+                        }`}
+                        style={{ minWidth: COL_W }}
+                      >
+                        {isProb && probVal > 0 ? (probVal * 100).toFixed(0) + "%" : ""}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+
+              {/* ── Separator / Header Row (cyan) ── */}
+              <tr className={`${headerBg} border-t-2 border-black`}>
+                <td className={`sticky left-0 z-10 p-1.5 font-semibold border-r ${headerBg}`} style={{ minWidth: LABEL_COL_W }}>
+                </td>
+                {showSqlsCols ? (
+                  <>
+                    <td className={`text-right p-1.5 font-semibold border-r ${headerBg}`} style={{ minWidth: SQLS_COL_W }}>SQLs</td>
+                    <td className={`text-right p-1.5 font-semibold border-r ${headerBg}`} style={{ minWidth: CONV_COL_W }}>Conv</td>
+                  </>
+                ) : (
+                  <td className={`text-right p-1.5 font-semibold border-r ${headerBg}`} style={{ minWidth: SQLS_COL_W }}>Opps</td>
+                )}
+                {quarters.map((q: QLabel) => (
+                  <td key={`hdr-${q.label}`} className={`text-right p-1.5 font-semibold border-r last:border-r-0 ${headerBg}`} style={{ minWidth: COL_W }}>
+                    {q.label}
+                  </td>
+                ))}
+              </tr>
+
+              {/* ── Bottom Section: Cascade Data ── */}
+              {visibleRows.map((row) => {
+                const globalRowIdx = quarters.findIndex(
+                  (q: QLabel) => q.year === row.quarter.year && q.quarter === row.quarter.quarter
+                );
+                const hasData = row.inputValue > 0;
+
+                return (
+                  <tr
+                    key={`data-${row.quarter.label}`}
+                    className={`border-t hover:bg-muted/20 ${!hasData ? "text-muted-foreground/40" : ""}`}
+                  >
+                    <td className={`sticky left-0 z-10 p-1 font-medium border-r ${isSql ? "bg-cyan-50/30 text-cyan-900" : "bg-cyan-50/30 text-cyan-900"}`} style={{ minWidth: LABEL_COL_W }}>
+                      {row.quarter.label}
+                    </td>
+                    {showSqlsCols ? (
+                      <>
+                        <td className="text-right p-1 font-mono border-r" style={{ minWidth: SQLS_COL_W }}>
+                          {hasData ? row.inputValue : ""}
+                        </td>
+                        <td className="text-right p-1 font-mono border-r" style={{ minWidth: CONV_COL_W }}>
+                          {hasData && row.conversionRate !== undefined ? pctFmt(row.conversionRate) : ""}
+                        </td>
+                      </>
+                    ) : (
+                      <td className="text-right p-1 font-mono border-r" style={{ minWidth: SQLS_COL_W }}>
+                        {hasData ? fmt(row.inputValue) : ""}
+                      </td>
+                    )}
+                    {quarters.map((_colQ: QLabel, colIdx: number) => {
+                      const value = row.cascadeValues[colIdx] || 0;
+                      const offset = colIdx - globalRowIdx;
+                      const isDiagonal = offset >= 0 && offset < probabilities.length;
+                      const isFirst = offset === 0;
+
+                      return (
+                        <td
+                          key={`val-${row.quarter.label}-${_colQ.label}`}
+                          className={`text-right p-1 font-mono border-r last:border-r-0 ${
+                            isFirst && value > 0 ? diagColor + " font-semibold" :
+                            isDiagonal && value > 0 ? diagFaintColor :
+                            ""
+                          }`}
+                          style={{ minWidth: COL_W }}
+                        >
+                          {fmt(value)}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+
+              {/* ── Totals Row (cyan) ── */}
+              <tr className={`border-t-2 border-black ${totalBg} font-semibold`}>
+                <td
+                  className={`sticky left-0 z-10 p-1.5 border-r ${totalBg} text-[8px] sm:text-[10px]`}
+                  colSpan={showSqlsCols ? 3 : 2}
+                  style={{ minWidth: LABEL_COL_W }}
+                >
+                  {isSql ? "Total Opps Created" : "Total Deals Won"}
+                </td>
+                {quarters.map((q: QLabel, colIdx: number) => (
+                  <td key={`tot-${q.label}`} className={`text-right p-1.5 font-mono border-r last:border-r-0 ${totalBg}`} style={{ minWidth: COL_W }}>
+                    {fmt(totals[colIdx])}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 export default function CascadeSheet() {
@@ -139,7 +376,6 @@ export default function CascadeSheet() {
 
   const { data: dqData } = trpc.cascade.dataQuality.useQuery({ companyId });
 
-  // Year selector for 4-quarter focus
   const yearOptions = useMemo(() => {
     if (!cascadeData) return [];
     return getYearOptions(cascadeData.quarterColumns);
@@ -148,7 +384,6 @@ export default function CascadeSheet() {
   const currentYear = new Date().getFullYear();
   const [selectedYear, setSelectedYear] = useState<number | null>(null);
 
-  // Determine the active year (default to current year or latest with data)
   const activeYear = useMemo(() => {
     if (selectedYear !== null) return selectedYear;
     if (!cascadeData) return currentYear;
@@ -160,45 +395,65 @@ export default function CascadeSheet() {
     return yearOptions.includes(currentYear) ? currentYear : latestDataYear;
   }, [selectedYear, cascadeData, yearOptions, currentYear]);
 
-  // Get the 4-quarter window indices
-  type QLabel = { year: number; quarter: number; label: string };
-  const fourQWindow = useMemo(() => {
-    if (!cascadeData) return { start: 0, end: 0, quarters: [] as QLabel[] };
-    const startIdx = cascadeData.quarterColumns.findIndex(
-      q => q.year === activeYear && q.quarter === 1
-    );
-    if (startIdx === -1) return { start: 0, end: 4, quarters: cascadeData.quarterColumns.slice(0, 4) };
-    const endIdx = Math.min(startIdx + 4, cascadeData.quarterColumns.length);
-    return {
-      start: startIdx,
-      end: endIdx,
-      quarters: cascadeData.quarterColumns.slice(startIdx, endIdx),
-    };
-  }, [cascadeData, activeYear]);
+  // Scroll refs for synchronized scrolling between panels
+  const sqlScrollRef = useRef<HTMLDivElement>(null);
+  const oppScrollRef = useRef<HTMLDivElement>(null);
+  const isScrolling = useRef(false);
 
-  // Get rows that have data relevant to this 4-quarter window
-  // (rows whose cascade values overlap with the window columns)
-  const sqlVisibleRows = useMemo(() => {
-    if (!cascadeData) return [];
-    const { start, end } = fourQWindow;
-    const sqlSpread = cascadeData.sqlProbabilities.length;
-    const firstRow = Math.max(0, start - sqlSpread + 1);
-    const lastRow = Math.min(cascadeData.rows.length - 1, end + sqlSpread - 1);
-    return cascadeData.rows.slice(firstRow, lastRow + 1).filter(
-      r => r.sqls > 0 || r.cascadeValues.some((v, idx) => idx >= start && idx < end && v > 0)
-    );
-  }, [cascadeData, fourQWindow]);
+  const handleSqlScroll = useCallback(() => {
+    if (isScrolling.current) return;
+    isScrolling.current = true;
+    if (sqlScrollRef.current && oppScrollRef.current) {
+      oppScrollRef.current.scrollLeft = sqlScrollRef.current.scrollLeft;
+    }
+    requestAnimationFrame(() => { isScrolling.current = false; });
+  }, []);
 
-  const oppVisibleRows = useMemo(() => {
-    if (!cascadeData) return [];
-    const { start, end } = fourQWindow;
-    const oppSpread = cascadeData.oppProbabilities.length;
-    const firstRow = Math.max(0, start - oppSpread + 1);
-    const lastRow = Math.min(cascadeData.oppRows.length - 1, end + oppSpread - 1);
-    return cascadeData.oppRows.slice(firstRow, lastRow + 1).filter(
-      r => r.opps > 0 || r.cascadeValues.some((v, idx) => idx >= start && idx < end && v > 0)
+  const handleOppScroll = useCallback(() => {
+    if (isScrolling.current) return;
+    isScrolling.current = true;
+    if (oppScrollRef.current && sqlScrollRef.current) {
+      sqlScrollRef.current.scrollLeft = oppScrollRef.current.scrollLeft;
+    }
+    requestAnimationFrame(() => { isScrolling.current = false; });
+  }, []);
+
+  // Scroll to the selected year when it changes
+  useEffect(() => {
+    if (!cascadeData) return;
+    const idx = cascadeData.quarterColumns.findIndex(
+      (q: QLabel) => q.year === activeYear && q.quarter === 1
     );
-  }, [cascadeData, fourQWindow]);
+    if (idx === -1) return;
+    const fixedCols = LABEL_COL_W + SQLS_COL_W + CONV_COL_W;
+    const scrollPos = idx * COL_W - 20;
+    setTimeout(() => {
+      sqlScrollRef.current?.scrollTo({ left: scrollPos, behavior: "smooth" });
+      oppScrollRef.current?.scrollTo({ left: scrollPos, behavior: "smooth" });
+    }, 100);
+  }, [activeYear, cascadeData]);
+
+  // Build panel data
+  const sqlPanelRows = useMemo(() => {
+    if (!cascadeData) return [];
+    return cascadeData.rows.map(r => ({
+      quarter: r.quarter,
+      inputValue: r.sqls,
+      inputLabel: "SQLs",
+      conversionRate: r.conversionRate,
+      cascadeValues: r.cascadeValues,
+    }));
+  }, [cascadeData]);
+
+  const oppPanelRows = useMemo(() => {
+    if (!cascadeData) return [];
+    return cascadeData.oppRows.map(r => ({
+      quarter: r.quarter,
+      inputValue: r.opps,
+      inputLabel: "Opps",
+      cascadeValues: r.cascadeValues,
+    }));
+  }, [cascadeData]);
 
   if (isLoading || companiesLoading || sheetsLoading) {
     return (
@@ -260,12 +515,6 @@ export default function CascadeSheet() {
   }
 
   const sheetKey = `${motion}/${region}`;
-  const { start: wStart, end: wEnd, quarters: windowQuarters } = fourQWindow;
-
-  // Column totals for the visible window
-  const sqlWindowTotals = windowQuarters.map((_: QLabel, i: number) => cascadeData.totalOppsPerQuarter[wStart + i] || 0);
-  const oppWindowTotals = windowQuarters.map((_: QLabel, i: number) => cascadeData.totalWonPerQuarter[wStart + i] || 0);
-
   const canGoPrev = yearOptions.indexOf(activeYear) > 0;
   const canGoNext = yearOptions.indexOf(activeYear) < yearOptions.length - 1;
 
@@ -343,6 +592,9 @@ export default function CascadeSheet() {
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
+              <span className="text-xs text-muted-foreground ml-2 hidden sm:inline">
+                Scroll to year
+              </span>
             </div>
           </div>
         </div>
@@ -391,234 +643,33 @@ export default function CascadeSheet() {
           </Card>
         </div>
 
-        {/* Two-Panel Cascade */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {/* LEFT PANEL: SQL Cascade */}
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-2 bg-amber-50/50 border-b">
-              <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                <span>SQL &rarr; Opportunity Cascade</span>
-                <Badge variant="outline" className="text-[10px] font-normal">Left of red bar</Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                How SQLs convert to opportunities over time
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              {/* SQL Probability Distribution */}
-              <div className="px-4 py-2 bg-yellow-50/40 border-b">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
-                  SQL Timing Probability
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {cascadeData.sqlProbabilities.map((p, i) => (
-                    <Badge
-                      key={i}
-                      variant={i === 0 ? "default" : "secondary"}
-                      className="text-[10px] px-2 py-0.5"
-                    >
-                      {i === 0 ? "Same Q" : i === 1 ? "+1 Q" : `+${i} Q`}: {(p * 100).toFixed(0)}%
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+        {/* Four-Quadrant Cascade Layout */}
+        <div className="space-y-4">
+          <CascadePanel
+            title="SQL &rarr; Opportunity Cascade"
+            subtitle="How SQLs convert to opportunities over time (left of red bar)"
+            probabilities={cascadeData.sqlProbabilities}
+            quarters={cascadeData.quarterColumns}
+            rows={sqlPanelRows}
+            totals={cascadeData.totalOppsPerQuarter}
+            showSqlsCols={true}
+            variant="sql"
+            scrollRef={sqlScrollRef}
+            onScroll={handleSqlScroll}
+          />
 
-              {/* SQL Cascade Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-[10px] sm:text-xs border-collapse min-w-[400px]">
-                  <thead>
-                    <tr className="bg-cyan-100/60">
-                      <th className="sticky left-0 z-10 bg-cyan-100/60 text-left p-1.5 sm:p-2 font-semibold border-r min-w-[60px]">
-                        Quarter
-                      </th>
-                      <th className="text-right p-1.5 sm:p-2 font-semibold border-r min-w-[45px]">
-                        SQLs
-                      </th>
-                      <th className="text-right p-1.5 sm:p-2 font-semibold border-r min-w-[42px]">
-                        Conv
-                      </th>
-                      {windowQuarters.map((q: QLabel) => (
-                        <th key={q.label} className="text-right p-1.5 sm:p-2 font-semibold min-w-[55px] border-r last:border-r-0">
-                          {q.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {sqlVisibleRows.map((row) => {
-                      const globalRowIdx = cascadeData.quarterColumns.findIndex(
-                        (q: QLabel) => q.year === row.quarter.year && q.quarter === row.quarter.quarter
-                      );
-                      const hasData = row.sqls > 0;
-
-                      return (
-                        <tr
-                          key={row.quarter.label}
-                          className={`border-t hover:bg-muted/20 ${!hasData ? "text-muted-foreground/50" : ""}`}
-                        >
-                          <td className="sticky left-0 z-10 bg-white p-1.5 sm:p-2 font-medium border-r text-yellow-800 bg-yellow-50/30">
-                            {row.quarter.label}
-                          </td>
-                          <td className="text-right p-1.5 sm:p-2 font-mono border-r">
-                            {row.sqls > 0 ? row.sqls : ""}
-                          </td>
-                          <td className="text-right p-1.5 sm:p-2 font-mono border-r">
-                            {row.sqls > 0 ? pctFmt(row.conversionRate) : ""}
-                          </td>
-                          {windowQuarters.map((colQ: QLabel, colIdx: number) => {
-                            const globalColIdx = wStart + colIdx;
-                            const value = row.cascadeValues[globalColIdx] || 0;
-                            const isDiagonal = globalColIdx >= globalRowIdx &&
-                              globalColIdx < globalRowIdx + cascadeData.sqlProbabilities.length;
-                            const isSameQuarter = globalColIdx === globalRowIdx;
-
-                            return (
-                              <td
-                                key={colQ.label}
-                                className={`text-right p-1.5 sm:p-2 font-mono border-r last:border-r-0 ${
-                                  isSameQuarter && value > 0
-                                    ? "bg-blue-100 font-semibold text-blue-900"
-                                    : isDiagonal && value > 0
-                                      ? "bg-blue-50 text-blue-800"
-                                      : ""
-                                }`}
-                              >
-                                {fmt(value)}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-
-                    {/* Totals Row */}
-                    <tr className="border-t-2 border-black bg-cyan-100/60 font-semibold">
-                      <td className="sticky left-0 z-10 bg-cyan-100/60 p-1.5 sm:p-2 border-r text-[9px] sm:text-xs" colSpan={3}>
-                        Total Opps Created
-                      </td>
-                      {windowQuarters.map((q: QLabel, colIdx: number) => (
-                        <td key={q.label} className="text-right p-1.5 sm:p-2 font-mono border-r last:border-r-0">
-                          {fmt(sqlWindowTotals[colIdx])}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Vertical Red Bar (visible on xl screens) */}
-          {/* On smaller screens the panels stack, so the red bar is horizontal */}
-
-          {/* RIGHT PANEL: Opportunity Cascade */}
-          <Card className="overflow-hidden border-l-4 border-l-red-500 xl:border-l-4">
-            <CardHeader className="pb-2 bg-red-50/30 border-b">
-              <CardTitle className="text-sm font-semibold flex items-center justify-between">
-                <span>Opportunity &rarr; Deal Win Cascade</span>
-                <Badge variant="outline" className="text-[10px] font-normal">Right of red bar</Badge>
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">
-                How opportunities convert to won deals over time
-              </p>
-            </CardHeader>
-            <CardContent className="p-0">
-              {/* Opp Probability Distribution */}
-              <div className="px-4 py-2 bg-red-50/20 border-b">
-                <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1.5">
-                  Opp Win Timing Probability
-                </p>
-                <div className="flex gap-2 flex-wrap">
-                  {cascadeData.oppProbabilities.map((p, i) => (
-                    <Badge
-                      key={i}
-                      variant={i === 0 ? "default" : "secondary"}
-                      className="text-[10px] px-2 py-0.5"
-                    >
-                      {i === 0 ? "Same Q" : i === 1 ? "+1 Q" : `+${i} Q`}: {(p * 100).toFixed(0)}%
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-
-              {/* Opp Cascade Table */}
-              <div className="overflow-x-auto">
-                <table className="w-full text-[10px] sm:text-xs border-collapse min-w-[400px]">
-                  <thead>
-                    <tr className="bg-cyan-100/60">
-                      <th className="sticky left-0 z-10 bg-cyan-100/60 text-left p-1.5 sm:p-2 font-semibold border-r min-w-[60px]">
-                        Quarter
-                      </th>
-                      <th className="text-right p-1.5 sm:p-2 font-semibold border-r min-w-[45px]">
-                        Opps
-                      </th>
-                      {windowQuarters.map((q: QLabel) => (
-                        <th key={q.label} className="text-right p-1.5 sm:p-2 font-semibold min-w-[55px] border-r last:border-r-0">
-                          {q.label}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {oppVisibleRows.map((row) => {
-                      const globalRowIdx = cascadeData.quarterColumns.findIndex(
-                        (q: QLabel) => q.year === row.quarter.year && q.quarter === row.quarter.quarter
-                      );
-                      const hasData = row.opps > 0;
-
-                      return (
-                        <tr
-                          key={row.quarter.label}
-                          className={`border-t hover:bg-muted/20 ${!hasData ? "text-muted-foreground/50" : ""}`}
-                        >
-                          <td className="sticky left-0 z-10 bg-white p-1.5 sm:p-2 font-medium border-r text-cyan-800 bg-cyan-50/30">
-                            {row.quarter.label}
-                          </td>
-                          <td className="text-right p-1.5 sm:p-2 font-mono border-r">
-                            {row.opps > 0 ? fmt(row.opps) : ""}
-                          </td>
-                          {windowQuarters.map((colQ: QLabel, colIdx: number) => {
-                            const globalColIdx = wStart + colIdx;
-                            const value = row.cascadeValues[globalColIdx] || 0;
-                            const isDiagonal = globalColIdx >= globalRowIdx &&
-                              globalColIdx < globalRowIdx + cascadeData.oppProbabilities.length;
-                            const isSameQuarter = globalColIdx === globalRowIdx;
-
-                            return (
-                              <td
-                                key={colQ.label}
-                                className={`text-right p-1.5 sm:p-2 font-mono border-r last:border-r-0 ${
-                                  isSameQuarter && value > 0
-                                    ? "bg-emerald-100 font-semibold text-emerald-900"
-                                    : isDiagonal && value > 0
-                                      ? "bg-emerald-50 text-emerald-800"
-                                      : ""
-                                }`}
-                              >
-                                {fmt(value)}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      );
-                    })}
-
-                    {/* Totals Row */}
-                    <tr className="border-t-2 border-black bg-cyan-100/60 font-semibold">
-                      <td className="sticky left-0 z-10 bg-cyan-100/60 p-1.5 sm:p-2 border-r text-[9px] sm:text-xs" colSpan={2}>
-                        Total Deals Won
-                      </td>
-                      {windowQuarters.map((q: QLabel, colIdx: number) => (
-                        <td key={q.label} className="text-right p-1.5 sm:p-2 font-mono border-r last:border-r-0">
-                          {fmt(oppWindowTotals[colIdx])}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+          <CascadePanel
+            title="Opportunity &rarr; Deal Win Cascade"
+            subtitle="How opportunities convert to won deals over time (right of red bar)"
+            probabilities={cascadeData.oppProbabilities}
+            quarters={cascadeData.quarterColumns}
+            rows={oppPanelRows}
+            totals={cascadeData.totalWonPerQuarter}
+            showSqlsCols={false}
+            variant="opp"
+            scrollRef={oppScrollRef}
+            onScroll={handleOppScroll}
+          />
         </div>
       </div>
     </DashboardLayout>

@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] - 2026-03-14
+
+### Added
+- **HubSpot sync on Refresh**: The top-bar Refresh button now triggers a live delta sync from HubSpot CRM, pulling fresh contacts and deals, with toast notifications showing sync results
+- **`cascade.triggerSync` API endpoint**: New tRPC mutation to trigger HubSpot sync from the frontend
+
+### Changed
+- **Top bar navigation**: Replaced "How it Works" link with "Documentation" button (BookOpen icon), matching the sidebar link
+- **Documentation restructured**: Moved Timing Distributions into Section 1 ("What Cascata Does") per PM feedback -- this is the heart of the cascade model. Reduced from 10 sections to 9.
+- **ILO renamed**: Display name changed from "ILO (Inside Lead Owned)" to "Inbound Led Outbound" across database, documentation, and glossary
+- **Glossary updated**: Motion definition now uses "Inbound Led Outbound (ILO)" terminology
+
 ## [1.3.0] - 2026-03-14
 
 ### Added

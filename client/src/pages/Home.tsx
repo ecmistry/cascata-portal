@@ -48,16 +48,15 @@ export default function Home() {
               <CardContent>
                 <div className="grid md:grid-cols-2 gap-x-8 gap-y-1.5">
                   {[
-                    ["overview", "1. What Cascata Does"],
+                    ["overview", "1. What Cascata Does & Timing Distributions"],
                     ["data-pipeline", "2. Data Pipeline (HubSpot ELT Sync)"],
                     ["configuration", "3. Configuration Page"],
                     ["cascade-engine", "4. The Cascade Calculation Engine"],
                     ["cascade-sheets", "5. Reading the Cascade Sheets"],
                     ["deal-classification", "6. Deal Classification Explained"],
-                    ["timing", "7. Timing Distributions"],
-                    ["data-model", "8. Internal Data Model"],
-                    ["daily-sync", "9. Daily Sync & Keeping Data Fresh"],
-                    ["glossary", "10. Glossary"],
+                    ["data-model", "7. Internal Data Model"],
+                    ["daily-sync", "8. Daily Sync & Keeping Data Fresh"],
+                    ["glossary", "9. Glossary"],
                   ].map(([id, title]) => (
                     <a
                       key={id}
@@ -132,6 +131,44 @@ export default function Home() {
                 <p className="text-muted-foreground text-sm">
                   Once opportunities exist, Cascata also tracks <strong>win rates</strong> (new business vs upsell)
                   and <strong>average contract values (ACV)</strong> to project revenue.
+                </p>
+
+                <h3 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
+                  <Clock className="h-5 w-5 text-teal-500" />
+                  Timing Distributions -- The Heart of the Cascade
+                </h3>
+                <p className="text-muted-foreground mb-4 text-sm">
+                  The timing distribution is what makes the cascade a cascade. It answers: "When an SQL converts to
+                  an opportunity, how quickly does that happen?"
+                </p>
+                <p className="text-muted-foreground mb-4 text-sm">
+                  During each sync, Cascata looks at every contact that has both a <strong>SQL date</strong> and an
+                  <strong> Opportunity date</strong>. It calculates the quarter difference between these two dates and
+                  builds a probability distribution:
+                </p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between p-2.5 bg-teal-50 rounded border border-teal-100">
+                    <span className="text-sm font-medium text-teal-900">Same Quarter (0 quarter gap)</span>
+                    <span className="text-sm font-semibold text-teal-700">Typically 85-95%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 bg-teal-50/60 rounded border border-teal-100">
+                    <span className="text-sm font-medium text-teal-800">Next Quarter (1 quarter gap)</span>
+                    <span className="text-sm font-semibold text-teal-600">Typically 5-12%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 bg-teal-50/30 rounded border border-teal-100">
+                    <span className="text-sm font-medium text-teal-700">Two Quarters Later (2+ quarter gap)</span>
+                    <span className="text-sm font-semibold text-teal-500">Typically 1-3%</span>
+                  </div>
+                </div>
+                <p className="text-muted-foreground text-sm mb-4">
+                  A minimum of 5 contacts with both dates is required per SQL type to generate a custom distribution.
+                  Below that threshold, a default of 89% / 10% / 1% is used. Each SQL type (motion) gets its own
+                  distribution -- Inbound SQLs may convert faster than Outbound, for example.
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  This is the core mechanism that creates the "cascade" effect: SQLs from one quarter don't just produce
+                  opportunities in that same quarter -- they spill forward into subsequent quarters based on these
+                  probabilities, producing the staircase pattern visible in the cascade sheets.
                 </p>
               </div>
             </div>
@@ -492,55 +529,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 7. Timing Distributions */}
-            <SectionAnchor id="timing" />
-            <div className="mb-12">
-              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
-                <Clock className="h-5 w-5 text-teal-500" />
-                7. Timing Distributions
-              </h2>
-              <p className="text-muted-foreground mb-4">
-                The timing distribution is what makes the cascade a cascade. It answers: "When an SQL converts to
-                an opportunity, how quickly does that happen?"
-              </p>
-
-              <Card className="mb-4">
-                <CardContent className="pt-5">
-                  <h4 className="text-sm font-semibold mb-3">How it's calculated</h4>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    During each sync, Cascata looks at every contact that has both a <strong>SQL date</strong> and an
-                    <strong> Opportunity date</strong>. It calculates the quarter difference between these two dates and
-                    builds a probability distribution:
-                  </p>
-                  <div className="space-y-2 mb-3">
-                    <div className="flex items-center justify-between p-2.5 bg-teal-50 rounded border border-teal-100">
-                      <span className="text-sm font-medium text-teal-900">Same Quarter (0 quarter gap)</span>
-                      <span className="text-sm font-semibold text-teal-700">Typically 85-95%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-teal-50/60 rounded border border-teal-100">
-                      <span className="text-sm font-medium text-teal-800">Next Quarter (1 quarter gap)</span>
-                      <span className="text-sm font-semibold text-teal-600">Typically 5-12%</span>
-                    </div>
-                    <div className="flex items-center justify-between p-2.5 bg-teal-50/30 rounded border border-teal-100">
-                      <span className="text-sm font-medium text-teal-700">Two Quarters Later (2+ quarter gap)</span>
-                      <span className="text-sm font-semibold text-teal-500">Typically 1-3%</span>
-                    </div>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    A minimum of 5 contacts with both dates is required per SQL type to generate a custom distribution.
-                    Below that threshold, a default of 89% / 10% / 1% is used. Each SQL type (motion) gets its own
-                    distribution -- Inbound SQLs may convert faster than Outbound, for example.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* 8. Data Model */}
+            {/* 7. Data Model */}
             <SectionAnchor id="data-model" />
             <div className="mb-12">
               <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Database className="h-5 w-5 text-slate-500" />
-                8. Internal Data Model
+                7. Internal Data Model
               </h2>
               <p className="text-muted-foreground mb-4">
                 The database stores the following tables, all populated automatically from HubSpot:
@@ -601,12 +595,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* 9. Daily Sync */}
+            {/* 8. Daily Sync */}
             <SectionAnchor id="daily-sync" />
             <div className="mb-12">
               <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <RefreshCw className="h-5 w-5 text-cyan-500" />
-                9. Daily Sync & Keeping Data Fresh
+                8. Daily Sync & Keeping Data Fresh
               </h2>
               <p className="text-muted-foreground mb-4">
                 The HubSpot sync runs automatically every day via cron at 2:00 AM UTC. It performs a delta sync,
@@ -644,12 +638,12 @@ export default function Home() {
               </Card>
             </div>
 
-            {/* 10. Glossary */}
+            {/* 9. Glossary */}
             <SectionAnchor id="glossary" />
             <div className="mb-12">
               <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-amber-500" />
-                10. Glossary
+                9. Glossary
               </h2>
               <div className="overflow-x-auto -mx-2 px-2">
                 <table className="w-full text-xs sm:text-sm border-collapse min-w-[400px]">
@@ -662,7 +656,7 @@ export default function Home() {
                   <tbody className="text-muted-foreground">
                     {[
                       ["SQL", "Sales Qualified Lead -- a contact that has been qualified by sales as a genuine opportunity to pursue."],
-                      ["Motion", "The channel or method that generated the SQL: Inbound (marketing-sourced), Outbound (BDR-generated), Event, Partner, ILO (Inbound-Led Outbound)."],
+                      ["Motion", "The channel or method that generated the SQL: Inbound (marketing-sourced), Outbound (BDR-generated), Event, Partner, Inbound Led Outbound (ILO)."],
                       ["Region / Pod", "The sales team, geographic territory, or pod that owns the SQL or deal."],
                       ["Cascade", "A quarter-by-quarter matrix showing how SQL cohorts flow forward through the pipeline over time."],
                       ["Conversion Rate", "The percentage of SQLs that become opportunities. Calculated per quarter from actual HubSpot data."],

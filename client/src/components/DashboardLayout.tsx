@@ -21,12 +21,13 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Users, RefreshCw, Home, ArrowLeft, Settings, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen } from "lucide-react";
-import { CSSProperties, useEffect, useRef, useState } from "react";
+import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen } from "lucide-react";
+import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
 import { Button } from "./ui/button";
 import { trpc } from "@/lib/trpc";
+import { toast } from "sonner";
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 240; /* Narrower sidebar for cleaner look */
@@ -478,64 +479,80 @@ function DashboardLayoutContent({
               <span className="hidden sm:inline">Dashboard</span>
             </Button>
           </div>
-          <div className="flex items-center gap-1 sm:gap-2">
-            {(location.startsWith("/performance/") || location.startsWith("/bigquery/") || location.startsWith("/whatif/") || location.startsWith("/scenarios/")) && (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => {
-                  let companyId = "0";
-                  if (location.startsWith("/performance/")) {
-                    companyId = location.split("/performance/")[1]?.split("/")[0] || "0";
-                  } else if (location.startsWith("/bigquery/")) {
-                    companyId = location.split("/bigquery/")[1]?.split("/")[0] || "0";
-                  } else if (location.startsWith("/whatif/")) {
-                    companyId = location.split("/whatif/")[1]?.split("/")[0] || "0";
-                  } else if (location.startsWith("/scenarios/")) {
-                    companyId = location.split("/scenarios/")[1]?.split("/")[0] || "0";
-                  }
-                  setLocation(`/model/${companyId}`);
-                }}
-                className="h-9 text-xs sm:text-sm text-muted-foreground"
-              >
-                <ArrowLeft className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Back to Model</span>
-              </Button>
-            )}
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setLocation("/how-it-works")}
-              className="h-9 text-xs sm:text-sm text-muted-foreground"
-            >
-              <span className="hidden sm:inline">How it Works</span>
-              <span className="sm:hidden">Docs</span>
-            </Button>
-            {user ? (
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => window.location.reload()}
-                className="h-9 text-xs sm:text-sm text-muted-foreground"
-              >
-                <RefreshCw className="h-4 w-4 sm:mr-1.5" />
-                <span className="hidden sm:inline">Refresh</span>
-              </Button>
-            ) : (
-              <Button
-                size="sm"
-                onClick={() => {
-                  window.location.href = "/login";
-                }}
-                className="h-9 text-xs sm:text-sm"
-              >
-                Login
-              </Button>
-            )}
-          </div>
+          <TopBarActions user={user} location={location} setLocation={setLocation} companyId={companyId} />
         </div>
         <main className="flex-1 bg-white p-3 sm:p-6">{children}</main>
       </SidebarInset>
     </>
+  );
+}
+
+function TopBarActions({
+  user,
+  location,
+  setLocation,
+  companyId,
+}: {
+  user: any;
+  location: string;
+  setLocation: (path: string) => void;
+  companyId: number;
+}) {
+  const utils = trpc.useUtils();
+  const syncMutation = trpc.cascade.triggerSync.useMutation({
+    onSuccess: (data) => {
+      toast.success(
+        `HubSpot sync complete — ${data.contactsFetched} contacts, ${data.dealsFetched} deals fetched in ${(data.durationMs / 1000).toFixed(1)}s`,
+      );
+      utils.invalidate();
+    },
+    onError: (err) => {
+      toast.error(`Sync failed: ${err.message}`);
+    },
+  });
+
+  const handleRefresh = useCallback(() => {
+    if (syncMutation.isPending) return;
+    toast.info("Syncing data from HubSpot...");
+    syncMutation.mutate({ companyId });
+  }, [companyId, syncMutation]);
+
+  return (
+    <div className="flex items-center gap-1 sm:gap-2">
+      <Button
+        variant="ghost"
+        size="sm"
+        onClick={() => setLocation("/how-it-works")}
+        className={`h-9 text-xs sm:text-sm ${
+          location === "/how-it-works" ? "text-foreground font-medium" : "text-muted-foreground"
+        }`}
+      >
+        <BookOpen className="h-4 w-4 sm:mr-1.5" />
+        <span className="hidden sm:inline">Documentation</span>
+        <span className="sm:hidden">Docs</span>
+      </Button>
+      {user ? (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={syncMutation.isPending}
+          className="h-9 text-xs sm:text-sm text-muted-foreground"
+        >
+          <RefreshCw className={`h-4 w-4 sm:mr-1.5 ${syncMutation.isPending ? "animate-spin" : ""}`} />
+          <span className="hidden sm:inline">
+            {syncMutation.isPending ? "Syncing..." : "Refresh"}
+          </span>
+        </Button>
+      ) : (
+        <Button
+          size="sm"
+          onClick={() => { window.location.href = "/login"; }}
+          className="h-9 text-xs sm:text-sm"
+        >
+          Login
+        </Button>
+      )}
+    </div>
   );
 }

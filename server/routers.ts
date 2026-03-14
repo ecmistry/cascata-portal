@@ -687,6 +687,25 @@ export const appRouter = router({
         return await calculateCascadeSheet(input.companyId, input.motion, regionNames);
       }),
 
+    triggerSync: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .mutation(async ({ input }) => {
+        const { syncFromHubSpot } = await import("./hubspotSync");
+        const stats = await syncFromHubSpot(input.companyId, { fullSync: false });
+        return {
+          success: stats.errors.length === 0,
+          contactsFetched: stats.contactsFetched,
+          dealsFetched: stats.dealsFetched,
+          regionsUpserted: stats.regionsUpserted,
+          sqlTypesUpserted: stats.sqlTypesUpserted,
+          sqlHistoryUpserted: stats.sqlHistoryUpserted,
+          actualsUpserted: stats.actualsUpserted,
+          timingDistributionsUpserted: stats.timingDistributionsUpserted,
+          durationMs: stats.durationMs,
+          errors: stats.errors,
+        };
+      }),
+
     availableSheets: protectedProcedure
       .input(z.object({ companyId: z.number().int().min(1) }))
       .query(async ({ input }) => {

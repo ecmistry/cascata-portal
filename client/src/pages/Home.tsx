@@ -51,8 +51,8 @@ export default function Home() {
                     ["overview", "1. What Cascata Does & Timing Distributions"],
                     ["data-pipeline", "2. Data Pipeline (HubSpot ELT Sync)"],
                     ["configuration", "3. Configuration Page"],
-                    ["cascade-engine", "4. The Cascade Calculation Engine"],
-                    ["cascade-sheets", "5. Reading the Cascade Sheets"],
+                    ["cascade-engine", "4. The Cascade Calculation Engine (6 Steps)"],
+                    ["cascade-sheets", "5. Reading the Cascade Sheets (Two-Panel Layout)"],
                     ["deal-classification", "6. Deal Classification Explained"],
                     ["data-model", "7. Internal Data Model"],
                     ["daily-sync", "8. Daily Sync & Keeping Data Fresh"],
@@ -99,23 +99,26 @@ export default function Home() {
                   because conversion rates, timing, and deal values differ across these dimensions.
                 </p>
 
-                <h3 className="text-lg font-semibold mt-6 mb-3">The Two Cascade Moments</h3>
-                <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <h3 className="text-lg font-semibold mt-6 mb-3">The Two Cascades</h3>
+                <p className="text-muted-foreground text-sm mb-4">
+                  The cascade model has two stages, each with its own timing distribution, shown side by side
+                  on each cascade sheet separated by a <strong className="text-red-600">red vertical bar</strong>:
+                </p>
+                <div className="grid md:grid-cols-5 gap-3 mb-4">
                   <Card className="text-center">
                     <CardContent className="pt-5">
                       <Badge variant="outline" className="mb-2 text-blue-600 border-blue-300">Stage 1</Badge>
                       <p className="font-semibold text-sm">SQL Created</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        A contact reaches Sales Qualified Lead status in HubSpot
+                        A contact reaches SQL status
                       </p>
                     </CardContent>
                   </Card>
                   <div className="flex items-center justify-center">
                     <div className="flex flex-col items-center gap-1">
-                      <ArrowRight className="h-5 w-5 text-muted-foreground hidden md:block" />
-                      <ArrowDown className="h-5 w-5 text-muted-foreground md:hidden" />
-                      <span className="text-xs text-muted-foreground">Conversion %</span>
-                      <span className="text-xs text-muted-foreground">+ Timing</span>
+                      <ArrowRight className="h-5 w-5 text-blue-400 hidden md:block" />
+                      <ArrowDown className="h-5 w-5 text-blue-400 md:hidden" />
+                      <span className="text-[10px] text-muted-foreground">SQL Timing</span>
                     </div>
                   </div>
                   <Card className="text-center">
@@ -123,52 +126,85 @@ export default function Home() {
                       <Badge variant="outline" className="mb-2 text-green-600 border-green-300">Stage 2</Badge>
                       <p className="font-semibold text-sm">Opportunity Created</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        The SQL converts to a deal/opportunity in the pipeline
+                        SQL converts to an opportunity
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <div className="flex items-center justify-center">
+                    <div className="flex flex-col items-center gap-1">
+                      <ArrowRight className="h-5 w-5 text-emerald-400 hidden md:block" />
+                      <ArrowDown className="h-5 w-5 text-emerald-400 md:hidden" />
+                      <span className="text-[10px] text-muted-foreground">Opp Timing</span>
+                    </div>
+                  </div>
+                  <Card className="text-center">
+                    <CardContent className="pt-5">
+                      <Badge variant="outline" className="mb-2 text-emerald-600 border-emerald-300">Stage 3</Badge>
+                      <p className="font-semibold text-sm">Deal Won</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Opportunity closes as won
                       </p>
                     </CardContent>
                   </Card>
                 </div>
-                <p className="text-muted-foreground text-sm">
-                  Once opportunities exist, Cascata also tracks <strong>win rates</strong> (new business vs upsell)
-                  and <strong>average contract values (ACV)</strong> to project revenue.
-                </p>
 
                 <h3 className="text-lg font-semibold mt-8 mb-3 flex items-center gap-2">
                   <Clock className="h-5 w-5 text-teal-500" />
                   Timing Distributions -- The Heart of the Cascade
                 </h3>
                 <p className="text-muted-foreground mb-4 text-sm">
-                  The timing distribution is what makes the cascade a cascade. It answers: "When an SQL converts to
-                  an opportunity, how quickly does that happen?"
+                  There are <strong>two timing distributions</strong>, one for each cascade:
                 </p>
-                <p className="text-muted-foreground mb-4 text-sm">
-                  During each sync, Cascata looks at every contact that has both a <strong>SQL date</strong> and an
-                  <strong> Opportunity date</strong>. It calculates the quarter difference between these two dates and
-                  builds a probability distribution:
+
+                <h4 className="text-sm font-semibold mt-4 mb-2 text-blue-800">1. SQL Timing (SQL &rarr; Opportunity)</h4>
+                <p className="text-muted-foreground mb-3 text-sm">
+                  Calculated from contacts that have both a <strong>SQL date</strong> and an <strong>Opportunity date</strong>.
+                  The quarter difference between these dates builds the probability distribution:
                 </p>
                 <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between p-2.5 bg-teal-50 rounded border border-teal-100">
-                    <span className="text-sm font-medium text-teal-900">Same Quarter (0 quarter gap)</span>
-                    <span className="text-sm font-semibold text-teal-700">Typically 85-95%</span>
+                  <div className="flex items-center justify-between p-2.5 bg-blue-50 rounded border border-blue-100">
+                    <span className="text-sm font-medium text-blue-900">Same Quarter</span>
+                    <span className="text-sm font-semibold text-blue-700">Typically 85-95%</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 bg-teal-50/60 rounded border border-teal-100">
-                    <span className="text-sm font-medium text-teal-800">Next Quarter (1 quarter gap)</span>
-                    <span className="text-sm font-semibold text-teal-600">Typically 5-12%</span>
+                  <div className="flex items-center justify-between p-2.5 bg-blue-50/60 rounded border border-blue-100">
+                    <span className="text-sm font-medium text-blue-800">Next Quarter</span>
+                    <span className="text-sm font-semibold text-blue-600">Typically 5-12%</span>
                   </div>
-                  <div className="flex items-center justify-between p-2.5 bg-teal-50/30 rounded border border-teal-100">
-                    <span className="text-sm font-medium text-teal-700">Two Quarters Later (2+ quarter gap)</span>
-                    <span className="text-sm font-semibold text-teal-500">Typically 1-3%</span>
+                  <div className="flex items-center justify-between p-2.5 bg-blue-50/30 rounded border border-blue-100">
+                    <span className="text-sm font-medium text-blue-700">+2 Quarters</span>
+                    <span className="text-sm font-semibold text-blue-500">Typically 1-3%</span>
                   </div>
                 </div>
+
+                <h4 className="text-sm font-semibold mt-4 mb-2 text-emerald-800">2. Opp Win Timing (Opportunity &rarr; Deal Won)</h4>
+                <p className="text-muted-foreground mb-3 text-sm">
+                  Calculated from closed-won deals by comparing the <strong>deal create date</strong> to the
+                  <strong> deal close date</strong>. This typically spans more quarters since deals take longer to close:
+                </p>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center justify-between p-2.5 bg-emerald-50 rounded border border-emerald-100">
+                    <span className="text-sm font-medium text-emerald-900">Same Quarter</span>
+                    <span className="text-sm font-semibold text-emerald-700">Typically 10-20%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 bg-emerald-50/60 rounded border border-emerald-100">
+                    <span className="text-sm font-medium text-emerald-800">+1 Quarter</span>
+                    <span className="text-sm font-semibold text-emerald-600">Typically 30-40%</span>
+                  </div>
+                  <div className="flex items-center justify-between p-2.5 bg-emerald-50/40 rounded border border-emerald-100">
+                    <span className="text-sm font-medium text-emerald-700">+2 to +6 Quarters</span>
+                    <span className="text-sm font-semibold text-emerald-500">Remaining %</span>
+                  </div>
+                </div>
+
                 <p className="text-muted-foreground text-sm mb-4">
-                  A minimum of 5 contacts with both dates is required per SQL type to generate a custom distribution.
-                  Below that threshold, a default of 89% / 10% / 1% is used. Each SQL type (motion) gets its own
-                  distribution -- Inbound SQLs may convert faster than Outbound, for example.
+                  A minimum of 5 data points is required per SQL type to generate custom distributions.
+                  Below that, defaults are used. Each SQL type (motion) gets its own distributions --
+                  Inbound SQLs may convert faster and close sooner than Outbound, for example.
                 </p>
                 <p className="text-muted-foreground text-sm">
-                  This is the core mechanism that creates the "cascade" effect: SQLs from one quarter don't just produce
-                  opportunities in that same quarter -- they spill forward into subsequent quarters based on these
-                  probabilities, producing the staircase pattern visible in the cascade sheets.
+                  These timing distributions create the "cascade" (staircase) pattern: values from one quarter
+                  spill forward into subsequent quarters based on the probabilities, and each cascade sheet
+                  shows this diagonal pattern clearly.
                 </p>
               </div>
             </div>
@@ -234,7 +270,11 @@ export default function Home() {
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      <span><strong>Timing Distributions</strong> -- probability of SQL converting in same/next/+2 quarter</span>
+                      <span><strong>SQL Timing</strong> -- probability of SQL converting in same/next/+2 quarter</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
+                      <span><strong>Opp Win Timing</strong> -- probability of deal closing in each quarter after opportunity creation</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -407,9 +447,26 @@ export default function Home() {
 
                 <Card className="border-l-4 border-l-red-500">
                   <CardContent className="pt-4">
-                    <h4 className="font-semibold text-sm mb-2">Step 5: Calculate Revenue</h4>
+                    <h4 className="font-semibold text-sm mb-2">Step 5: Opportunity Cascade (Opp &rarr; Deal Won)</h4>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      The "Total Opps Created" from each quarter column feeds into the second cascade. The opp win
+                      timing distribution (calculated from deal create date → close date) spreads these opportunities
+                      across future quarters to predict when deals will close:
+                    </p>
+                    <div className="flex gap-2 flex-wrap">
+                      <Badge variant="outline" className="text-xs">Same Quarter: ~14%</Badge>
+                      <Badge variant="outline" className="text-xs">+1 Quarter: ~33%</Badge>
+                      <Badge variant="outline" className="text-xs">+2 Quarters: ~25%</Badge>
+                      <Badge variant="outline" className="text-xs">+3 to +6 Quarters: remaining</Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-pink-500">
+                  <CardContent className="pt-4">
+                    <h4 className="font-semibold text-sm mb-2">Step 6: Calculate Revenue</h4>
                     <p className="text-xs text-muted-foreground">
-                      Opportunities are multiplied by win rates (separately for new business and upsell) and then by
+                      Won deals are multiplied by win rates (separately for new business and upsell) and then by
                       average contract values (ACV) to produce revenue forecasts. Win rates and ACVs are calculated
                       from your actual closed-won deals in HubSpot.
                     </p>
@@ -432,25 +489,61 @@ export default function Home() {
 
               <Card className="mb-4">
                 <CardContent className="pt-5">
-                  <h4 className="text-sm font-semibold mb-3">Anatomy of a Cascade Sheet</h4>
+                  <h4 className="text-sm font-semibold mb-3">Two-Panel Side-by-Side Layout</h4>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    Each cascade sheet displays two panels placed <strong>side by side</strong> within a single horizontally
+                    scrollable container:
+                  </p>
+                  <div className="space-y-3 text-sm text-muted-foreground">
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0 mt-0.5 text-blue-600 border-blue-300">Left Panel</Badge>
+                      <span><strong>SQL &rarr; Opportunity Cascade</strong> -- Shows SQL volumes, the SQL timing probability matrix (diagonal), and how SQLs cascade forward into opportunities by quarter.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Badge className="shrink-0 mt-0.5 bg-red-500 text-white border-red-500">Red Bar</Badge>
+                      <span>A red vertical divider separates the two cascades, mirroring the Excel spreadsheet format.</span>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <Badge variant="outline" className="shrink-0 mt-0.5 text-emerald-600 border-emerald-300">Right Panel</Badge>
+                      <span><strong>Opportunity &rarr; Deal Won Cascade</strong> -- Takes the "Total Opps Created" from the left panel and cascades them forward using the opp win timing distribution to predict when deals close.</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mb-4">
+                <CardContent className="pt-5">
+                  <h4 className="text-sm font-semibold mb-3">Anatomy of Each Panel</h4>
                   <div className="space-y-3 text-sm text-muted-foreground">
                     <div className="flex items-start gap-2">
                       <Badge variant="outline" className="shrink-0 mt-0.5">Header</Badge>
                       <span>Shows the motion/region name, overall conversion rate, win rates (new/upsell), and average contract values.</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="shrink-0 mt-0.5">Probabilities</Badge>
-                      <span>The SQL timing distribution -- what percentage of converted SQLs land in same/next/+2 quarter. These are calculated from your actual data when enough samples exist (5+ contacts with both SQL and Opp dates).</span>
+                      <Badge variant="outline" className="shrink-0 mt-0.5">Probability Matrix</Badge>
+                      <span>A diagonal matrix showing the timing probabilities. For the SQL cascade this is 3 values (same/next/+2 quarter). For the Opp cascade this can span 4-7+ quarters since deals take longer to close.</span>
                     </div>
                     <div className="flex items-start gap-2">
-                      <Badge variant="outline" className="shrink-0 mt-0.5">Table</Badge>
-                      <span>Rows = source quarters (when SQLs were created). Columns = destination quarters (when opportunities land). The diagonal pattern shows the cascade effect. Column totals at the bottom show total expected opportunities per quarter.</span>
+                      <Badge variant="outline" className="shrink-0 mt-0.5">Cascade Table</Badge>
+                      <span>Rows = source quarters. Columns = destination quarters. The staircase pattern shows each cohort cascading forward. Column totals at the bottom show totals per quarter.</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <Badge variant="outline" className="shrink-0 mt-0.5">Dropdown</Badge>
-                      <span>Switch between different motion/region sheets to compare how Inbound NORAM differs from Outbound EMESA, for example.</span>
+                      <span>Switch between different motion/region sheets to compare performance across segments.</span>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+
+              <Card className="mb-4">
+                <CardContent className="pt-5">
+                  <h4 className="text-sm font-semibold mb-3">Quarter Range Filter</h4>
+                  <p className="text-xs text-muted-foreground">
+                    Above the cascade table, "From" and "To" quarter selectors let you narrow the displayed range.
+                    By default, all available quarters are shown. Select specific start and end quarters to focus on
+                    a particular time period. Click "Reset" to return to the full view. This is useful for comparing
+                    like-for-like periods or focusing on recent quarters.
+                  </p>
                 </CardContent>
               </Card>
             </div>
@@ -577,7 +670,7 @@ export default function Home() {
                     </tr>
                     <tr className="border-b">
                       <td className="p-2.5 font-mono text-xs">timeDistributions</td>
-                      <td className="p-2.5">Probability of same/next/+2 quarter conversion</td>
+                      <td className="p-2.5">SQL timing (same/next/+2 quarter) + opp win timing (JSON array of quarter probabilities)</td>
                       <td className="p-2.5">Per SQL type</td>
                     </tr>
                     <tr className="border-b">
@@ -618,11 +711,11 @@ export default function Home() {
                   <div className="space-y-2 text-xs text-muted-foreground">
                     <p>
                       <strong>Contacts:</strong> Filtered by <code className="bg-muted px-1 rounded">lastmodifieddate &gt;= last sync time</code>.
-                      Only contacts at the SQL lifecycle stage are fetched.
+                      Only contacts that have the SQL date property set (<code className="bg-muted px-1 rounded">HAS_PROPERTY</code> filter) are fetched.
                     </p>
                     <p>
                       <strong>Deals:</strong> Filtered by <code className="bg-muted px-1 rounded">hs_lastmodifieddate &gt;= last sync time</code>.
-                      All deals are fetched (filtering happens during transformation).
+                      Only closed-won deals are fetched (filtered by configured closed-won stage IDs).
                     </p>
                     <p>
                       <strong>Full sync:</strong> Can be triggered manually to re-process all historical data. This is useful after changing
@@ -665,11 +758,13 @@ export default function Home() {
                       ["Region / Pod", "The sales team, geographic territory, or pod that owns the SQL or deal."],
                       ["Cascade", "A quarter-by-quarter matrix showing how SQL cohorts flow forward through the pipeline over time."],
                       ["Conversion Rate", "The percentage of SQLs that become opportunities. Calculated per quarter from actual HubSpot data."],
-                      ["Timing Distribution", "The probability split of when converted SQLs become opportunities (same quarter, next quarter, or later)."],
+                      ["SQL Timing", "The probability split of when converted SQLs become opportunities (same quarter, next quarter, or later). Shown in the left panel."],
+                      ["Opp Win Timing", "The probability split of when opportunities close as won deals, spanning multiple quarters. Calculated from deal create date to close date. Shown in the right panel."],
                       ["Win Rate", "The percentage of opportunities that close as won deals. Tracked separately for new business and upsell."],
                       ["ACV", "Average Contract Value -- the mean deal value, calculated from closed-won deals. Separate values for new business and upsell."],
                       ["ELT Sync", "Extract-Load-Transform -- the process of pulling data from HubSpot, loading it into the database, and transforming it into the cascade model."],
                       ["Delta Sync", "An incremental sync that only processes records modified since the last sync, reducing API calls and processing time."],
+                      ["Quarter Range Filter", "From/To quarter selectors on cascade sheets that let you narrow the displayed columns to a specific time period."],
                       ["Closed-Won", "A deal stage indicating the customer has signed and the deal is complete. Revenue is recognised at this stage."],
                     ].map(([term, def]) => (
                       <tr key={term} className="border-b">

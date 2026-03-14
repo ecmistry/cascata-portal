@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] - 2026-03-14
+
+### Added
+- **Two-panel cascade layout**: Cascade sheets now display the SQL → Opportunity cascade and Opportunity → Deal Won cascade side by side with a red vertical divider, matching the Excel spreadsheet format
+- **Opportunity cascade engine**: New cascade stage that takes total opportunities per quarter from the SQL cascade and applies opp win timing probabilities to project when deals close across future quarters
+- **Opp win timing distribution**: Calculated from deal create date → close date for closed-won deals, stored as JSON array in `timeDistributions.oppTimingJson`, with up to 7 quarter offsets
+- **Quarter range filter**: "From" and "To" quarter selectors on each cascade sheet allow narrowing the displayed range to a specific time period, with a Reset button to return to full view
+- **Database migration** (`0007_add_opp_timing.sql`): Added `oppTimingJson` TEXT column to `timeDistributions` table
+
+### Changed
+- **Cascade sheet layout**: Replaced stacked vertical layout with side-by-side horizontal scroll container — both panels share a single scrollbar
+- **Documentation page**: Updated to cover both cascades, two-panel layout, probability matrices, quarter range filter, opp win timing distributions, and updated glossary
+- **Cascade engine**: Added Step 5 (Opp → Deal Won) and Step 6 (Revenue), expanding from 5 to 6 steps
+
 ## [1.5.0] - 2026-03-14
 
 ### Added

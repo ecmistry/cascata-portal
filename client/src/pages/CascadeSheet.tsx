@@ -12,7 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { TrendingUp, Percent, DollarSign, Target, AlertCircle } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { TrendingUp, Percent, DollarSign, Target, AlertCircle, AlertTriangle, CheckCircle2 } from "lucide-react";
 
 function fmt(n: number, decimals = 1): string {
   if (n === 0) return "";
@@ -28,6 +29,79 @@ function currFmt(n: number): string {
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
+}
+
+interface DqData {
+  coveragePct: number;
+  contactsFetched: number;
+  contactsUsed: number;
+  contactsSkipped: number;
+  dealsFetched: number;
+  dealsUsed: number;
+  dealsSkipped: number;
+  syncTimestamp: string | Date;
+  report?: {
+    unmappedRegionValues?: Record<string, number>;
+    unmappedSqlTypeValues?: Record<string, number>;
+    skippedNoRegion?: number;
+    skippedNoSqlType?: number;
+    skippedNoSqlDate?: number;
+    skippedUnmappedRegion?: number;
+    skippedUnmappedSqlType?: number;
+  } | null;
+}
+
+function DataCoverageBadge({ dq }: { dq: DqData }) {
+  const pct = dq.coveragePct;
+  const isGood = pct >= 90;
+  const isWarning = pct >= 70 && pct < 90;
+  const isBad = pct < 70;
+
+  const badgeVariant = isGood ? "default" : isWarning ? "secondary" : "destructive";
+  const Icon = isGood ? CheckCircle2 : isBad ? AlertCircle : AlertTriangle;
+  const color = isGood ? "text-green-600" : isWarning ? "text-amber-600" : "text-red-600";
+
+  const unmappedRegions = dq.report?.unmappedRegionValues ?? {};
+  const unmappedSqlTypes = dq.report?.unmappedSqlTypeValues ?? {};
+  const hasUnmapped = Object.keys(unmappedRegions).length > 0 || Object.keys(unmappedSqlTypes).length > 0;
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Badge variant={badgeVariant} className={`cursor-help gap-1 text-xs ${isGood ? "bg-green-100 text-green-800 hover:bg-green-200" : ""}`}>
+            <Icon className="h-3 w-3" />
+            {pct.toFixed(0)}% data coverage
+          </Badge>
+        </TooltipTrigger>
+        <TooltipContent side="bottom" className="max-w-xs">
+          <div className="space-y-1.5 text-xs">
+            <p className="font-semibold">Data Quality Summary</p>
+            <p>Contacts: {dq.contactsUsed} of {dq.contactsFetched} used ({pct.toFixed(1)}%)</p>
+            <p>Deals: {dq.dealsUsed} of {dq.dealsFetched} used</p>
+            {dq.contactsSkipped > 0 && (
+              <p className={color}>{dq.contactsSkipped} contacts skipped</p>
+            )}
+            {hasUnmapped && (
+              <div className="border-t pt-1.5 mt-1.5">
+                {Object.entries(unmappedRegions).length > 0 && (
+                  <p className="text-amber-600">Unmapped regions: {Object.entries(unmappedRegions).map(([k,v]) => `${k} (${v})`).join(", ")}</p>
+                )}
+                {Object.entries(unmappedSqlTypes).length > 0 && (
+                  <p className="text-amber-600">Unmapped SQL types: {Object.entries(unmappedSqlTypes).map(([k,v]) => `${k} (${v})`).join(", ")}</p>
+                )}
+              </div>
+            )}
+            {!isGood && (
+              <p className="border-t pt-1.5 mt-1.5 text-muted-foreground">
+                Visit Data Quality page for details and fixes
+              </p>
+            )}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 }
 
 export default function CascadeSheet() {
@@ -58,6 +132,8 @@ export default function CascadeSheet() {
       : { companyId, motion: "_", region: "_" },
     { enabled: !!motion && !!region, retry: 1 },
   );
+
+  const { data: dqData } = trpc.cascade.dataQuality.useQuery({ companyId });
 
   const visibleRange = useMemo(() => {
     if (!cascadeData) return { start: 0, end: 0 };
@@ -150,9 +226,12 @@ export default function CascadeSheet() {
         {/* Header */}
         <div className="flex flex-col gap-3">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
-              {currentSheet?.label ?? `${cascadeData.motionDisplay} ${cascadeData.regionDisplay}`}
-            </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
+                {currentSheet?.label ?? `${cascadeData.motionDisplay} ${cascadeData.regionDisplay}`}
+              </h1>
+              {dqData && <DataCoverageBadge dq={dqData} />}
+            </div>
             <p className="text-sm text-muted-foreground mt-1">
               {cascadeData.motionDisplay} motion &middot; {cascadeData.regionDisplay}
             </p>

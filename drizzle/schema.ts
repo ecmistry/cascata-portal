@@ -60,6 +60,10 @@ export interface SyncConfig {
   closedWonStageIds: string[];
   newDealTypeValues: string[];
   upsellDealTypeValues: string[];
+  regionAliases?: Record<string, string>;
+  sqlTypeAliases?: Record<string, string>;
+  fallbackRegion?: string;
+  fallbackSqlType?: string;
 }
 
 /**
@@ -218,6 +222,27 @@ export const actuals = mysqlTable("actuals", {
 
 export type Actual = typeof actuals.$inferSelect;
 export type InsertActual = typeof actuals.$inferInsert;
+
+/**
+ * Data quality reports persisted each sync
+ */
+export const dataQualityReports = mysqlTable("dataQualityReports", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  syncTimestamp: timestamp("syncTimestamp").defaultNow().notNull(),
+  reportJson: text("reportJson").notNull(), // Full DataQualityReport as JSON
+  contactsFetched: int("contactsFetched").notNull().default(0),
+  contactsUsed: int("contactsUsed").notNull().default(0),
+  contactsSkipped: int("contactsSkipped").notNull().default(0),
+  coveragePct: int("coveragePct").notNull().default(0), // basis points (9500 = 95.00%)
+  dealsFetched: int("dealsFetched").notNull().default(0),
+  dealsUsed: int("dealsUsed").notNull().default(0),
+  dealsSkipped: int("dealsSkipped").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DataQualityReportRow = typeof dataQualityReports.$inferSelect;
+export type InsertDataQualityReport = typeof dataQualityReports.$inferInsert;
 
 /**
  * Saved What-If scenarios for comparison and sharing

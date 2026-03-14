@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] - 2026-03-14
+
+### Added
+- **Extended data quality checks**: Timing distribution gaps (contacts with SQL date but no Opp date), deal amount anomalies (zero/missing amounts, outliers, unclassified deal types), date anomalies (future/pre-2015 dates), sparse region/motion combination warnings, and timing sample size per motion
+- **Deal skip reason tracking**: Full breakdown of why closed-won deals are excluded — missing Deal Pod, unmapped region/SQL type, missing close date — with per-value unmapped counts
+- **Data flow waterfall view**: Replaced simple summary cards with visual waterfall showing exactly how HubSpot records flow through filtering stages into the cascade model, with counts and percentages at each step
+- **Discrepancy explanation section**: New "Understanding the Discrepancies" card on the Data Quality page explaining why numbers may differ from HubSpot reports, with specific improvement recommendations
+- **117 data quality tests**: Comprehensive test coverage for alias mapping, fallback logic, deal skip tracking, timing gaps, deal amount analysis, date anomalies, sparse combinations, and extended report validation
+
+### Changed
+- **Contact fetch filter**: Changed from filtering by `lifecyclestage = salesqualifiedlead` to `HAS_PROPERTY` on SQL date field. Now captures contacts who progressed past SQL stage (to Opportunity, Customer, etc.), increasing fetched count from ~444 to ~2,268 — matching HubSpot report totals exactly
+- **Deal fetch filter**: Changed from fetching all deals (4,387) to only fetching closed-won deals (1,638) server-side, reducing unnecessary API calls and making data quality metrics more accurate
+- **Removed lifecycle stage gate**: Contact processing no longer checks lifecycle stage — if a contact has an SQL date, it's counted as an SQL regardless of current stage
+- **HAS_PROPERTY operator support**: Updated `fetchAllRecords` to correctly handle HubSpot Search API operators that don't accept a `value` parameter
+
+### Fixed
+- **SQL count alignment with HubSpot**: Portal SQL volumes now align with HubSpot's contact pod report totals (2,268 contacts fetched = HubSpot report total)
+
 ## [1.4.0] - 2026-03-14
 
 ### Added

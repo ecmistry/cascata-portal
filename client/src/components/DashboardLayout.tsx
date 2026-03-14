@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen } from "lucide-react";
+import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen, ShieldCheck } from "lucide-react";
 import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -143,7 +143,7 @@ function DashboardLayoutContent({
   
   // Auto-expand settings if on a settings page
   useEffect(() => {
-    if (location === "/portal-stats" || location === "/change-history" || location === "/how-it-works") {
+    if (location === "/portal-stats" || location === "/change-history" || location === "/how-it-works" || location === "/data-quality") {
       setSettingsExpanded(true);
     }
   }, [location]);
@@ -323,6 +323,21 @@ function DashboardLayoutContent({
                 <SidebarMenu className="px-2 py-1">
                   <SidebarMenuItem>
                     <SidebarMenuButton
+                      isActive={location === "/data-quality"}
+                      onClick={() => setLocation("/data-quality")}
+                      tooltip="Data Quality"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/data-quality" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <ShieldCheck
+                        className={`h-4 w-4 ${location === "/data-quality" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                      <span className={location === "/data-quality" ? "font-medium" : ""}>Data Quality</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
                       isActive={location === "/portal-stats"}
                       onClick={() => setLocation("/portal-stats")}
                       tooltip="Portal Stats"
@@ -370,6 +385,20 @@ function DashboardLayoutContent({
               )}
               {isCollapsed && (
                 <SidebarMenu className="px-2 py-1">
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={location === "/data-quality"}
+                      onClick={() => setLocation("/data-quality")}
+                      tooltip="Data Quality"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/data-quality" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <ShieldCheck
+                        className={`h-4 w-4 ${location === "/data-quality" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       isActive={location === "/portal-stats"}

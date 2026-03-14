@@ -3,7 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Columns, Save, Check } from "lucide-react";
+import { Columns, Save, Check, AlertTriangle, MapPin, Tag } from "lucide-react";
+import { useLocation } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import {
   Popover,
@@ -119,6 +120,87 @@ function TagInput({ values, onChange, placeholder }: TagInputProps) {
   );
 }
 
+interface AliasEditorProps {
+  aliases: Record<string, string>;
+  onChange: (aliases: Record<string, string>) => void;
+  fromLabel: string;
+  toLabel: string;
+  toOptions: string[];
+}
+
+function AliasEditor({ aliases, onChange, fromLabel, toLabel, toOptions }: AliasEditorProps) {
+  const [newFrom, setNewFrom] = useState("");
+  const [newTo, setNewTo] = useState("");
+
+  const addAlias = () => {
+    const from = newFrom.trim().toLowerCase();
+    const to = newTo.trim();
+    if (from && to) {
+      onChange({ ...aliases, [from]: to });
+      setNewFrom("");
+      setNewTo("");
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      {Object.keys(aliases).length > 0 && (
+        <div className="space-y-1">
+          {Object.entries(aliases).map(([from, to]) => (
+            <div key={from} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1.5">
+              <span className="font-mono text-amber-700">"{from}"</span>
+              <span className="text-muted-foreground">&rarr;</span>
+              <span className="font-semibold text-green-700">{to}</span>
+              <button
+                onClick={() => {
+                  const next = { ...aliases };
+                  delete next[from];
+                  onChange(next);
+                }}
+                className="ml-auto text-red-500 hover:text-red-700"
+              >
+                &times;
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+      <div className="flex gap-1.5 items-end">
+        <div className="flex-1">
+          <Label className="text-[10px] text-muted-foreground">{fromLabel}</Label>
+          <Input
+            value={newFrom}
+            onChange={(e) => setNewFrom(e.target.value)}
+            placeholder="e.g. apac"
+            className="h-7 text-xs"
+          />
+        </div>
+        <div className="flex-1">
+          <Label className="text-[10px] text-muted-foreground">{toLabel}</Label>
+          {toOptions.length > 0 ? (
+            <select
+              value={newTo}
+              onChange={(e) => setNewTo(e.target.value)}
+              className="h-7 w-full text-xs rounded-md border border-input bg-background px-2"
+            >
+              <option value="">Select...</option>
+              {toOptions.map(o => <option key={o} value={o}>{o}</option>)}
+            </select>
+          ) : (
+            <Input
+              value={newTo}
+              onChange={(e) => setNewTo(e.target.value)}
+              placeholder="e.g. NORAM"
+              className="h-7 text-xs"
+            />
+          )}
+        </div>
+        <Button size="sm" variant="outline" className="h-7 text-xs px-2" onClick={addAlias}>Add</Button>
+      </div>
+    </div>
+  );
+}
+
 export default function CascataTest() {
   const { user } = useAuth();
   const utils = trpc.useUtils();
@@ -126,9 +208,16 @@ export default function CascataTest() {
   const { data: companies = [] } = trpc.company.list.useQuery();
   const companyId = companies[0]?.id ?? 1;
 
+  const [, setLocation] = useLocation();
   const { data: contactsData, isLoading: contactsLoading } = trpc.dashboard.playground.cascataTest.useQuery({ page: 1, pageSize: 25 });
   const { data: dealsData, isLoading: dealsLoading } = trpc.dashboard.playground.cascataTestDeals.useQuery({ page: 1, pageSize: 25 });
   const { data: savedConfig, isLoading: configLoading } = trpc.cascade.getSyncConfig.useQuery({ companyId });
+  const { data: dqData } = trpc.cascade.dataQuality.useQuery({ companyId });
+  const { data: regionsData } = trpc.region.list.useQuery({ companyId });
+  const { data: sqlTypesData } = trpc.sqlType.list.useQuery({ companyId });
+
+  const existingRegions = useMemo(() => (regionsData ?? []).map(r => r.name), [regionsData]);
+  const existingSqlTypes = useMemo(() => (sqlTypesData ?? []).map(s => s.name), [sqlTypesData]);
 
   const saveMutation = trpc.cascade.saveSyncConfig.useMutation({
     onSuccess: () => {
@@ -153,6 +242,10 @@ export default function CascataTest() {
   const [closedWonStageIds, setClosedWonStageIds] = useState<string[]>([]);
   const [newDealTypeValues, setNewDealTypeValues] = useState<string[]>([]);
   const [upsellDealTypeValues, setUpsellDealTypeValues] = useState<string[]>([]);
+  const [regionAliases, setRegionAliases] = useState<Record<string, string>>({});
+  const [sqlTypeAliases, setSqlTypeAliases] = useState<Record<string, string>>({});
+  const [fallbackRegion, setFallbackRegion] = useState("");
+  const [fallbackSqlType, setFallbackSqlType] = useState("");
 
   // Initialize from saved config
   useEffect(() => {
@@ -169,6 +262,10 @@ export default function CascataTest() {
       setClosedWonStageIds(savedConfig.closedWonStageIds);
       setNewDealTypeValues(savedConfig.newDealTypeValues);
       setUpsellDealTypeValues(savedConfig.upsellDealTypeValues);
+      setRegionAliases(savedConfig.regionAliases ?? {});
+      setSqlTypeAliases(savedConfig.sqlTypeAliases ?? {});
+      setFallbackRegion(savedConfig.fallbackRegion ?? "");
+      setFallbackSqlType(savedConfig.fallbackSqlType ?? "");
     }
   }, [savedConfig]);
 
@@ -203,6 +300,10 @@ export default function CascataTest() {
         closedWonStageIds,
         newDealTypeValues,
         upsellDealTypeValues,
+        regionAliases: Object.keys(regionAliases).length > 0 ? regionAliases : undefined,
+        sqlTypeAliases: Object.keys(sqlTypeAliases).length > 0 ? sqlTypeAliases : undefined,
+        fallbackRegion: fallbackRegion || undefined,
+        fallbackSqlType: fallbackSqlType || undefined,
       },
     });
   };
@@ -352,6 +453,147 @@ export default function CascataTest() {
                 onChange={setUpsellDealTypeValues}
                 placeholder="e.g. existingbusiness"
               />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Data Quality & Mapping */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              Data Quality Mapping
+            </CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configure how unmapped HubSpot values are handled. Add aliases to map unexpected values to known regions/motions,
+              or set a fallback to catch everything else.
+              {dqData && dqData.contactsSkipped > 0 && (
+                <button
+                  onClick={() => setLocation("/data-quality")}
+                  className="text-blue-600 hover:underline ml-1"
+                >
+                  View full data quality report ({dqData.coveragePct.toFixed(0)}% coverage)
+                </button>
+              )}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Unmapped values hint */}
+            {dqData?.report && (
+              <>
+                {Object.keys(dqData.report.unmappedRegionValues ?? {}).length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <MapPin className="h-3.5 w-3.5 text-amber-600" />
+                      <span className="text-xs font-medium text-amber-800">Unmapped region values found in last sync</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(dqData.report.unmappedRegionValues!).sort(([,a],[,b]) => b - a).map(([val, count]) => (
+                        <Badge key={val} variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                          "{val}" ({count})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {Object.keys(dqData.report.unmappedSqlTypeValues ?? {}).length > 0 && (
+                  <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3">
+                    <div className="flex items-center gap-1.5 mb-2">
+                      <Tag className="h-3.5 w-3.5 text-amber-600" />
+                      <span className="text-xs font-medium text-amber-800">Unmapped SQL type values found in last sync</span>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {Object.entries(dqData.report.unmappedSqlTypeValues!).sort(([,a],[,b]) => b - a).map(([val, count]) => (
+                        <Badge key={val} variant="outline" className="text-[10px] border-amber-300 text-amber-700">
+                          "{val}" ({count})
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            <div className="rounded-lg border p-4">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <MapPin className="h-3.5 w-3.5" /> Region Aliases
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Map unexpected region values from HubSpot to known Cascata regions. Keys are case-insensitive.
+              </p>
+              <AliasEditor
+                aliases={regionAliases}
+                onChange={setRegionAliases}
+                fromLabel="HubSpot value"
+                toLabel="Maps to region"
+                toOptions={existingRegions}
+              />
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <Label className="text-sm font-medium flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5" /> SQL Type Aliases
+              </Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Map unexpected SQL type values from HubSpot to known Cascata motions. Keys are case-insensitive.
+              </p>
+              <AliasEditor
+                aliases={sqlTypeAliases}
+                onChange={setSqlTypeAliases}
+                fromLabel="HubSpot value"
+                toLabel="Maps to motion"
+                toOptions={existingSqlTypes}
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="rounded-lg border p-4">
+                <Label className="text-sm font-medium">Fallback Region</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  If a contact/deal has a region value that doesn't match any mapping or alias, assign it to this region instead of skipping it.
+                </p>
+                {existingRegions.length > 0 ? (
+                  <select
+                    value={fallbackRegion}
+                    onChange={(e) => setFallbackRegion(e.target.value)}
+                    className="h-8 w-full text-xs rounded-md border border-input bg-background px-2"
+                  >
+                    <option value="">None (skip unmapped)</option>
+                    {existingRegions.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                ) : (
+                  <Input
+                    value={fallbackRegion}
+                    onChange={(e) => setFallbackRegion(e.target.value)}
+                    placeholder="e.g. NORAM"
+                    className="h-8 text-xs"
+                  />
+                )}
+              </div>
+
+              <div className="rounded-lg border p-4">
+                <Label className="text-sm font-medium">Fallback SQL Type</Label>
+                <p className="text-xs text-muted-foreground mt-1 mb-2">
+                  If a contact has a SQL type value that doesn't match any mapping or alias, assign it to this motion instead of skipping it.
+                </p>
+                {existingSqlTypes.length > 0 ? (
+                  <select
+                    value={fallbackSqlType}
+                    onChange={(e) => setFallbackSqlType(e.target.value)}
+                    className="h-8 w-full text-xs rounded-md border border-input bg-background px-2"
+                  >
+                    <option value="">None (skip unmapped)</option>
+                    {existingSqlTypes.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                ) : (
+                  <Input
+                    value={fallbackSqlType}
+                    onChange={(e) => setFallbackSqlType(e.target.value)}
+                    placeholder="e.g. INBOUND"
+                    className="h-8 text-xs"
+                  />
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>

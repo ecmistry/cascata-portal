@@ -11,7 +11,8 @@ import {
   timeDistributions, TimeDistribution, InsertTimeDistribution,
   forecasts, Forecast, InsertForecast,
   actuals, Actual, InsertActual,
-  scenarios, Scenario, InsertScenario
+  scenarios, Scenario, InsertScenario,
+  dataQualityReports, InsertDataQualityReport, DataQualityReportRow,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { ERROR_MESSAGES } from '@shared/const';
@@ -819,6 +820,43 @@ export async function updateCompanyBigQueryConfig(companyId: number, config: { b
   await db.update(companies).set(config).where(eq(companies.id, companyId));
 }
 
+
+// ============================================================================
+// Data Quality Reports
+// ============================================================================
+
+export async function insertDataQualityReport(data: Omit<InsertDataQualityReport, 'id' | 'createdAt'>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(dataQualityReports).values(data);
+}
+
+export async function getLatestDataQualityReport(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      const result = await db.select()
+        .from(dataQualityReports)
+        .where(eq(dataQualityReports.companyId, companyId))
+        .orderBy(desc(dataQualityReports.syncTimestamp))
+        .limit(1);
+      return result[0] ?? null;
+    },
+    () => null,
+  );
+}
+
+export async function getDataQualityHistory(companyId: number, limit = 10) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select()
+        .from(dataQualityReports)
+        .where(eq(dataQualityReports.companyId, companyId))
+        .orderBy(desc(dataQualityReports.syncTimestamp))
+        .limit(limit);
+    },
+    () => [],
+  );
+}
 
 // ============================================================================
 // Scenario Management

@@ -651,6 +651,10 @@ export const appRouter = router({
           closedWonStageIds: ["closedwon", "19291292", "96740205"],
           newDealTypeValues: ["newbusiness"],
           upsellDealTypeValues: ["existingbusiness", "customerrenewal"],
+          regionAliases: {},
+          sqlTypeAliases: {},
+          fallbackRegion: "",
+          fallbackSqlType: "",
         };
       }),
 
@@ -670,6 +674,10 @@ export const appRouter = router({
           closedWonStageIds: z.array(z.string()).min(1),
           newDealTypeValues: z.array(z.string()),
           upsellDealTypeValues: z.array(z.string()),
+          regionAliases: z.record(z.string(), z.string()).optional(),
+          sqlTypeAliases: z.record(z.string(), z.string()).optional(),
+          fallbackRegion: z.string().optional(),
+          fallbackSqlType: z.string().optional(),
         }),
       }))
       .mutation(async ({ input }) => {
@@ -698,14 +706,49 @@ export const appRouter = router({
           success: stats.errors.length === 0,
           contactsFetched: stats.contactsFetched,
           dealsFetched: stats.dealsFetched,
-          regionsUpserted: stats.regionsUpserted,
-          sqlTypesUpserted: stats.sqlTypesUpserted,
           sqlHistoryUpserted: stats.sqlHistoryUpserted,
           actualsUpserted: stats.actualsUpserted,
           timingDistributionsUpserted: stats.timingDistributionsUpserted,
           durationMs: stats.durationMs,
           errors: stats.errors,
+          dataQuality: stats.dataQuality,
         };
+      }),
+
+    dataQuality: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const latest = await db.getLatestDataQualityReport(input.companyId);
+        if (!latest) return null;
+        let report = null;
+        try { report = JSON.parse(latest.reportJson); } catch { /* noop */ }
+        return {
+          syncTimestamp: latest.syncTimestamp,
+          contactsFetched: latest.contactsFetched,
+          contactsUsed: latest.contactsUsed,
+          contactsSkipped: latest.contactsSkipped,
+          coveragePct: latest.coveragePct / 100,
+          dealsFetched: latest.dealsFetched,
+          dealsUsed: latest.dealsUsed,
+          dealsSkipped: latest.dealsSkipped,
+          report,
+        };
+      }),
+
+    dataQualityHistory: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1), limit: z.number().int().min(1).max(50).default(10) }))
+      .query(async ({ input }) => {
+        const rows = await db.getDataQualityHistory(input.companyId, input.limit);
+        return rows.map(r => ({
+          syncTimestamp: r.syncTimestamp,
+          contactsFetched: r.contactsFetched,
+          contactsUsed: r.contactsUsed,
+          contactsSkipped: r.contactsSkipped,
+          coveragePct: r.coveragePct / 100,
+          dealsFetched: r.dealsFetched,
+          dealsUsed: r.dealsUsed,
+          dealsSkipped: r.dealsSkipped,
+        }));
       }),
 
     availableSheets: protectedProcedure

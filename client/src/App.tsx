@@ -19,6 +19,7 @@ import PortalStats from "./pages/PortalStats";
 import ChangeHistory from "./pages/ChangeHistory";
 import CascataTest from "./pages/playground/CascataTest";
 import CascadeSheet from "./pages/CascadeSheet";
+import DataQuality from "./pages/DataQuality";
 import { useInactivityTimer } from "./_core/hooks/useInactivityTimer";
 import { useAuth } from "./_core/hooks/useAuth";
 import { useState, useEffect } from "react";
@@ -50,6 +51,7 @@ function Router() {
       <Route path={"/portal-stats"} component={PortalStats} />
       <Route path={"/change-history"} component={ChangeHistory} />
       <Route path={"/configure-cascata"} component={CascataTest} />
+      <Route path={"/data-quality"} component={DataQuality} />
       <Route path={"/cascade/:motion/:region"} component={CascadeSheet} />
       <Route path={"/cascade"} component={CascadeSheet} />
       <Route path={"/404"} component={NotFound} />

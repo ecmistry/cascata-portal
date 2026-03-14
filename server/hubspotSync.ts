@@ -35,6 +35,10 @@ interface MappingConfig {
   closedWonStageIds: string[];
   newDealTypeValues: string[];
   upsellDealTypeValues: string[];
+  regionAliases?: Record<string, string>;
+  sqlTypeAliases?: Record<string, string>;
+  fallbackRegion?: string;
+  fallbackSqlType?: string;
 }
 
 /**
@@ -124,15 +128,22 @@ interface SearchResponse {
 async function fetchAllRecords(
   objectType: string,
   properties: string[],
-  filters: Array<{ propertyName: string; operator: string; value: string }> = [],
+  filters: Array<{ propertyName: string; operator: string; value?: string }> = [],
 ): Promise<HubSpotRecord[]> {
   const client = api();
   const all: HubSpotRecord[] = [];
   let after: string | undefined;
 
+  const NO_VALUE_OPERATORS = new Set(["HAS_PROPERTY", "NOT_HAS_PROPERTY"]);
+
   for (let page = 0; page < MAX_PAGES; page++) {
+    const sanitizedFilters = filters.map(f =>
+      NO_VALUE_OPERATORS.has(f.operator)
+        ? { propertyName: f.propertyName, operator: f.operator }
+        : f
+    );
     const body: Record<string, unknown> = {
-      filterGroups: filters.length > 0 ? [{ filters }] : [],
+      filterGroups: sanitizedFilters.length > 0 ? [{ filters: sanitizedFilters }] : [],
       sorts: [{ propertyName: "createdate", direction: "ASCENDING" }],
       properties,
       limit: PAGE_LIMIT,
@@ -157,17 +168,23 @@ async function fetchAllRecords(
 
 function mapContactRegion(raw: string | null | undefined, cfg: MappingConfig): string | null {
   if (!raw) return null;
-  return cfg.contactRegionMap[raw.trim().toLowerCase()] ?? null;
+  const key = raw.trim().toLowerCase();
+  if (cfg.regionAliases?.[key]) return cfg.regionAliases[key];
+  return cfg.contactRegionMap[key] ?? cfg.fallbackRegion ?? null;
 }
 
 function mapDealRegion(raw: string | null | undefined, cfg: MappingConfig): string | null {
   if (!raw) return null;
-  return cfg.dealRegionMap[raw.trim().toLowerCase()] ?? null;
+  const key = raw.trim().toLowerCase();
+  if (cfg.regionAliases?.[key]) return cfg.regionAliases[key];
+  return cfg.dealRegionMap[key] ?? cfg.fallbackRegion ?? null;
 }
 
 function mapSqlType(raw: string | null | undefined, cfg: MappingConfig): string | null {
   if (!raw) return null;
-  return cfg.sqlTypeMap[raw.trim().toLowerCase()] ?? null;
+  const key = raw.trim().toLowerCase();
+  if (cfg.sqlTypeAliases?.[key]) return cfg.sqlTypeAliases[key];
+  return cfg.sqlTypeMap[key] ?? cfg.fallbackSqlType ?? null;
 }
 
 function toQuarter(dateStr: string | null | undefined): { year: number; quarter: number } | null {
@@ -178,6 +195,51 @@ function toQuarter(dateStr: string | null | undefined): { year: number; quarter:
 }
 
 // ── Sync result ─────────────────────────────────────────────────────────
+
+export interface DataQualityReport {
+  contactsFetched: number;
+  contactsUsed: number;
+  contactsSkipped: number;
+  skippedNoRegion: number;
+  skippedNoSqlType: number;
+  skippedNoSqlDate: number;
+  skippedUnmappedRegion: number;
+  skippedUnmappedSqlType: number;
+  unmappedRegionValues: Record<string, number>;
+  unmappedSqlTypeValues: Record<string, number>;
+  dealsFetched: number;
+  dealsUsed: number;
+  dealsSkipped: number;
+  dealsSkippedNoRegion: number;
+  dealsSkippedNoSqlType: number;
+  dealsSkippedNoCloseDate: number;
+  dealsSkippedUnmappedRegion: number;
+  dealsSkippedUnmappedSqlType: number;
+  dealsUnmappedRegionValues: Record<string, number>;
+  dealsUnmappedSqlTypeValues: Record<string, number>;
+  coveragePct: number;
+  // Timing distribution quality
+  contactsWithSqlDate: number;
+  contactsWithOppDate: number;
+  contactsMissingOppDate: number;
+  timingSamplesByMotion: Record<string, number>;
+  // Deal economics quality
+  dealsClosedWon: number;
+  dealsZeroAmount: number;
+  dealsNoAmount: number;
+  dealsNoDealType: number;
+  dealAmountOutliers: number;
+  dealAmountMin: number;
+  dealAmountMax: number;
+  dealAmountMedian: number;
+  // Date anomalies
+  contactsFutureSqlDate: number;
+  contactsOldSqlDate: number;
+  dealsFutureCloseDate: number;
+  dealsOldCloseDate: number;
+  // Sparse combinations
+  sparseCombinations: Array<{ motion: string; region: string; sqlCount: number }>;
+}
 
 export interface SyncStats {
   contactsFetched: number;
@@ -190,6 +252,7 @@ export interface SyncStats {
   timingDistributionsUpserted: number;
   errors: string[];
   durationMs: number;
+  dataQuality: DataQualityReport;
 }
 
 // ── Main sync function ──────────────────────────────────────────────────
@@ -218,8 +281,30 @@ export async function syncFromHubSpot(
       closedWonStageIds: storedConfig.closedWonStageIds,
       newDealTypeValues: storedConfig.newDealTypeValues,
       upsellDealTypeValues: storedConfig.upsellDealTypeValues,
+      regionAliases: storedConfig.regionAliases,
+      sqlTypeAliases: storedConfig.sqlTypeAliases,
+      fallbackRegion: storedConfig.fallbackRegion,
+      fallbackSqlType: storedConfig.fallbackSqlType,
     } : {}),
     ...opts.mapping,
+  };
+  const dq: DataQualityReport = {
+    contactsFetched: 0, contactsUsed: 0, contactsSkipped: 0,
+    skippedNoRegion: 0, skippedNoSqlType: 0, skippedNoSqlDate: 0,
+    skippedUnmappedRegion: 0, skippedUnmappedSqlType: 0,
+    unmappedRegionValues: {}, unmappedSqlTypeValues: {},
+    dealsFetched: 0, dealsUsed: 0, dealsSkipped: 0,
+    dealsSkippedNoRegion: 0, dealsSkippedNoSqlType: 0, dealsSkippedNoCloseDate: 0,
+    dealsSkippedUnmappedRegion: 0, dealsSkippedUnmappedSqlType: 0,
+    dealsUnmappedRegionValues: {}, dealsUnmappedSqlTypeValues: {},
+    coveragePct: 0,
+    contactsWithSqlDate: 0, contactsWithOppDate: 0, contactsMissingOppDate: 0,
+    timingSamplesByMotion: {},
+    dealsClosedWon: 0, dealsZeroAmount: 0, dealsNoAmount: 0, dealsNoDealType: 0,
+    dealAmountOutliers: 0, dealAmountMin: 0, dealAmountMax: 0, dealAmountMedian: 0,
+    contactsFutureSqlDate: 0, contactsOldSqlDate: 0,
+    dealsFutureCloseDate: 0, dealsOldCloseDate: 0,
+    sparseCombinations: [],
   };
   const stats: SyncStats = {
     contactsFetched: 0,
@@ -232,6 +317,7 @@ export async function syncFromHubSpot(
     timingDistributionsUpserted: 0,
     errors: [],
     durationMs: 0,
+    dataQuality: dq,
   };
 
   const regions = await db.getRegionsByCompany(companyId);
@@ -257,36 +343,41 @@ export async function syncFromHubSpot(
   }
 
   // ── Extract contacts ────────────────────────────────────────────────
+  // Fetch all contacts that have an SQL date set, regardless of current
+  // lifecycle stage.  This captures contacts who were SQLs but have since
+  // progressed to Opportunity, Customer, etc.
 
-  console.log("[HubSpot Sync] Fetching contacts (SQL lifecycle stage only)...");
+  console.log("[HubSpot Sync] Fetching contacts (any with SQL date)...");
   const contactProps = ["createdate", "lastmodifieddate", "lifecyclestage", "hs_lead_status", cfg.contactRegionProperty, cfg.contactSqlTypeProperty, cfg.contactSqlDateProperty, cfg.contactOppDateProperty];
   let contacts: HubSpotRecord[] = [];
   try {
-    // Filter server-side to only get contacts at SQL lifecycle stage
-    for (const stage of cfg.sqlLifecycleStages) {
-      const sqlContacts = await fetchAllRecords("contacts", contactProps, [
-        ...contactModifiedFilter,
-        { propertyName: "lifecyclestage", operator: "EQ", value: stage },
-      ]);
-      contacts.push(...sqlContacts);
-    }
+    contacts = await fetchAllRecords("contacts", contactProps, [
+      ...contactModifiedFilter,
+      { propertyName: cfg.contactSqlDateProperty, operator: "HAS_PROPERTY", value: "" },
+    ]);
     stats.contactsFetched = contacts.length;
-    console.log(`[HubSpot Sync] Fetched ${contacts.length} SQL contacts`);
+    console.log(`[HubSpot Sync] Fetched ${contacts.length} contacts with SQL date`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     stats.errors.push(`Contact fetch failed: ${msg}`);
     console.error("[HubSpot Sync] Contact fetch failed:", msg);
   }
 
-  // ── Extract deals ───────────────────────────────────────────────────
+  // ── Extract deals (closed-won stages only) ─────────────────────────
 
-  console.log("[HubSpot Sync] Fetching deals...");
+  console.log("[HubSpot Sync] Fetching closed-won deals...");
   const dealProps = ["createdate", "lastmodifieddate", "hs_lastmodifieddate", "dealstage", "dealtype", cfg.dealAmountProperty, cfg.dealCloseDateProperty, cfg.dealCreatedDateProperty, cfg.dealRegionProperty, cfg.dealSqlTypeProperty];
   let deals: HubSpotRecord[] = [];
   try {
-    deals = await fetchAllRecords("deals", dealProps, dealModifiedFilter);
+    for (const stageId of cfg.closedWonStageIds) {
+      const stageDeals = await fetchAllRecords("deals", dealProps, [
+        ...dealModifiedFilter,
+        { propertyName: "dealstage", operator: "EQ", value: stageId },
+      ]);
+      deals.push(...stageDeals);
+    }
     stats.dealsFetched = deals.length;
-    console.log(`[HubSpot Sync] Fetched ${deals.length} deals`);
+    console.log(`[HubSpot Sync] Fetched ${deals.length} closed-won deals`);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     stats.errors.push(`Deal fetch failed: ${msg}`);
@@ -297,22 +388,55 @@ export async function syncFromHubSpot(
 
   console.log("[HubSpot Sync] Building SQL history...");
   const sqlVolumes = new Map<string, number>(); // "regionName|sqlTypeName|year|quarter" → volume
+  dq.contactsFetched = contacts.length;
 
   for (const c of contacts) {
-    const stage = (c.properties.lifecyclestage ?? c.properties.hs_lead_status ?? "").toLowerCase();
-    if (!cfg.sqlLifecycleStages.includes(stage)) continue;
-
-    const region = mapContactRegion(c.properties[cfg.contactRegionProperty], cfg);
-    const sqlType = mapSqlType(c.properties[cfg.contactSqlTypeProperty], cfg);
-    // Use configured SQL date field; fall back to createdate
+    const rawRegion = c.properties[cfg.contactRegionProperty];
+    const rawSqlType = c.properties[cfg.contactSqlTypeProperty];
+    const region = mapContactRegion(rawRegion, cfg);
+    const sqlType = mapSqlType(rawSqlType, cfg);
     const sqlDateRaw = c.properties[cfg.contactSqlDateProperty] || c.properties.createdate;
     const qtr = toQuarter(sqlDateRaw);
-    if (!region || !sqlType || !qtr) continue;
-    if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) continue;
 
+    if (!rawRegion) { dq.skippedNoRegion++; dq.contactsSkipped++; continue; }
+    if (!region) {
+      dq.skippedUnmappedRegion++;
+      dq.unmappedRegionValues[rawRegion] = (dq.unmappedRegionValues[rawRegion] || 0) + 1;
+      dq.contactsSkipped++; continue;
+    }
+    if (!rawSqlType) { dq.skippedNoSqlType++; dq.contactsSkipped++; continue; }
+    if (!sqlType) {
+      dq.skippedUnmappedSqlType++;
+      dq.unmappedSqlTypeValues[rawSqlType] = (dq.unmappedSqlTypeValues[rawSqlType] || 0) + 1;
+      dq.contactsSkipped++; continue;
+    }
+    if (!qtr) { dq.skippedNoSqlDate++; dq.contactsSkipped++; continue; }
+    if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) { dq.contactsSkipped++; continue; }
+
+    // Date anomaly checks
+    const now = new Date();
+    const sqlDateParsed = new Date(sqlDateRaw!);
+    if (!isNaN(sqlDateParsed.getTime())) {
+      dq.contactsWithSqlDate++;
+      if (sqlDateParsed > now) dq.contactsFutureSqlDate++;
+      if (sqlDateParsed.getFullYear() < 2015) dq.contactsOldSqlDate++;
+    }
+
+    // Timing gap: has SQL date but no Opp date
+    const oppDateRaw = c.properties[cfg.contactOppDateProperty];
+    if (oppDateRaw && !isNaN(new Date(oppDateRaw).getTime())) {
+      dq.contactsWithOppDate++;
+    } else {
+      dq.contactsMissingOppDate++;
+    }
+
+    dq.contactsUsed++;
     const key = `${region}|${sqlType}|${qtr.year}|${qtr.quarter}`;
     sqlVolumes.set(key, (sqlVolumes.get(key) || 0) + 1);
   }
+
+  dq.coveragePct = dq.contactsFetched > 0 ? Math.round((dq.contactsUsed / dq.contactsFetched) * 10000) / 100 : 0;
+  console.log(`[HubSpot Sync] Contact data quality: ${dq.contactsUsed}/${dq.contactsFetched} used (${dq.coveragePct}%), ${dq.contactsSkipped} skipped`);
 
   for (const [key, volume] of sqlVolumes) {
     const [region, sqlType, yearStr, quarterStr] = key.split("|");
@@ -337,17 +461,69 @@ export async function syncFromHubSpot(
   console.log("[HubSpot Sync] Building actuals...");
   const actualRevenues = new Map<string, { revenue: number; sqls: number; opps: number }>();
 
-  const closedWonDeals = deals.filter((d) =>
-    cfg.closedWonStageIds.includes((d.properties.dealstage ?? "").toLowerCase()),
-  );
+  dq.dealsFetched = deals.length;
+  dq.dealsClosedWon = deals.length;
 
-  for (const d of closedWonDeals) {
-    const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+  // Collect deal amounts for outlier/median analysis
+  const allDealAmounts: number[] = [];
+  for (const d of deals) {
+    const amtRaw = d.properties[cfg.dealAmountProperty];
+    if (!amtRaw || amtRaw === "") { dq.dealsNoAmount++; continue; }
+    const amt = parseFloat(amtRaw) || 0;
+    if (amt === 0) { dq.dealsZeroAmount++; }
+    else { allDealAmounts.push(amt); }
+    if (!d.properties.dealtype || d.properties.dealtype === "") dq.dealsNoDealType++;
+  }
+  // Amount stats
+  if (allDealAmounts.length > 0) {
+    allDealAmounts.sort((a, b) => a - b);
+    dq.dealAmountMin = allDealAmounts[0];
+    dq.dealAmountMax = allDealAmounts[allDealAmounts.length - 1];
+    const mid = Math.floor(allDealAmounts.length / 2);
+    dq.dealAmountMedian = allDealAmounts.length % 2 === 0
+      ? (allDealAmounts[mid - 1] + allDealAmounts[mid]) / 2
+      : allDealAmounts[mid];
+    // Outlier detection: >3x median or <0.1x median
+    const medianVal = dq.dealAmountMedian;
+    if (medianVal > 0) {
+      dq.dealAmountOutliers = allDealAmounts.filter(a => a > medianVal * 3 || a < medianVal * 0.1).length;
+    }
+  }
+
+  for (const d of deals) {
+    const rawDealRegion = d.properties[cfg.dealRegionProperty];
+    const region = mapDealRegion(rawDealRegion, cfg);
     const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
     const qtr = toQuarter(d.properties[cfg.dealCloseDateProperty]);
     const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
-    if (!region || !sqlType || !qtr) continue;
-    if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) continue;
+
+    if (!rawDealRegion) { dq.dealsSkippedNoRegion++; }
+    else if (!region) {
+      dq.dealsSkippedUnmappedRegion++;
+      dq.dealsUnmappedRegionValues[rawDealRegion] = (dq.dealsUnmappedRegionValues[rawDealRegion] || 0) + 1;
+    }
+    const rawDealSqlType = d.properties[cfg.dealSqlTypeProperty];
+    if (!rawDealSqlType) { dq.dealsSkippedNoSqlType++; }
+    else if (!sqlType) {
+      dq.dealsSkippedUnmappedSqlType++;
+      dq.dealsUnmappedSqlTypeValues[rawDealSqlType] = (dq.dealsUnmappedSqlTypeValues[rawDealSqlType] || 0) + 1;
+    }
+    if (!qtr) { dq.dealsSkippedNoCloseDate++; }
+
+    // Deal date anomalies
+    const closeDateRaw = d.properties[cfg.dealCloseDateProperty];
+    if (closeDateRaw) {
+      const closeDate = new Date(closeDateRaw);
+      if (!isNaN(closeDate.getTime())) {
+        const now = new Date();
+        if (closeDate > now) dq.dealsFutureCloseDate++;
+        if (closeDate.getFullYear() < 2015) dq.dealsOldCloseDate++;
+      }
+    }
+
+    if (!region || !sqlType || !qtr) { dq.dealsSkipped++; continue; }
+    if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) { dq.dealsSkipped++; continue; }
+    dq.dealsUsed++;
 
     const key = `${region}|${sqlType}|${qtr.year}|${qtr.quarter}`;
     const existing = actualRevenues.get(key) || { revenue: 0, sqls: 0, opps: 0 };
@@ -456,7 +632,7 @@ export async function syncFromHubSpot(
 
   const acvData = new Map<string, { newTotal: number; newCount: number; upsellTotal: number; upsellCount: number }>();
 
-  for (const d of closedWonDeals) {
+  for (const d of deals) {
     const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
     if (!region || !regionByName.has(region)) continue;
 
@@ -503,9 +679,6 @@ export async function syncFromHubSpot(
   const timingBuckets = new Map<number, { sameQ: number; nextQ: number; twoQ: number; total: number }>();
 
   for (const c of contacts) {
-    const stage = (c.properties.lifecyclestage ?? c.properties.hs_lead_status ?? "").toLowerCase();
-    if (!cfg.sqlLifecycleStages.includes(stage)) continue;
-
     const sqlType = mapSqlType(c.properties[cfg.contactSqlTypeProperty], cfg);
     if (!sqlType || !sqlTypeByName.has(sqlType)) continue;
     const sqlTypeId = sqlTypeByName.get(sqlType)!;
@@ -551,7 +724,27 @@ export async function syncFromHubSpot(
       stats.errors.push(`Timing distribution upsert (type ${sqlTypeId}): ${err instanceof Error ? err.message : err}`);
     }
   }
+  // Record timing sample counts per motion (SQL type name)
+  for (const [sqlTypeId, bucket] of timingBuckets) {
+    const sqlTypeName = [...sqlTypeByName.entries()].find(([, id]) => id === sqlTypeId)?.[0];
+    if (sqlTypeName) dq.timingSamplesByMotion[sqlTypeName] = bucket.total;
+  }
+
   console.log(`[HubSpot Sync] Upserted ${stats.timingDistributionsUpserted} timing distributions (from ${timingBuckets.size} SQL types with data)`);
+
+  // ── Detect sparse region/motion combinations ──────────────────────
+  const comboCounts = new Map<string, number>();
+  for (const [key, count] of sqlVolumes) {
+    const [region, sqlType] = key.split("|");
+    const comboKey = `${sqlType}|${region}`;
+    comboCounts.set(comboKey, (comboCounts.get(comboKey) || 0) + count);
+  }
+  for (const [comboKey, count] of comboCounts) {
+    if (count < 5) {
+      const [motion, region] = comboKey.split("|");
+      dq.sparseCombinations.push({ motion, region, sqlCount: count });
+    }
+  }
 
   // ── Recalculate forecasts ───────────────────────────────────────────
 
@@ -563,6 +756,24 @@ export async function syncFromHubSpot(
     const msg = err instanceof Error ? err.message : String(err);
     stats.errors.push(`Forecast calculation: ${msg}`);
     console.error("[HubSpot Sync] Forecast calculation failed:", msg);
+  }
+
+  // ── Persist data quality report ─────────────────────────────────────
+
+  try {
+    await db.insertDataQualityReport({
+      companyId,
+      reportJson: JSON.stringify(dq),
+      contactsFetched: dq.contactsFetched,
+      contactsUsed: dq.contactsUsed,
+      contactsSkipped: dq.contactsSkipped,
+      coveragePct: Math.round(dq.coveragePct * 100),
+      dealsFetched: dq.dealsFetched,
+      dealsUsed: dq.dealsUsed,
+      dealsSkipped: dq.dealsSkipped,
+    });
+  } catch (err) {
+    stats.errors.push(`Data quality report persist: ${err instanceof Error ? err.message : err}`);
   }
 
   // ── Update sync timestamp ──────────────────────────────────────────

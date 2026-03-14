@@ -294,7 +294,7 @@ export default function Home() {
                 ))}
               </div>
 
-              <h3 className="text-lg font-semibold mt-6 mb-3">Deal Properties (4 questions)</h3>
+              <h3 className="text-lg font-semibold mt-6 mb-3">Deal Properties (5 questions)</h3>
               <div className="space-y-3 mb-6">
                 {[
                   {
@@ -316,6 +316,11 @@ export default function Home() {
                     q: "What field tracks the close date?",
                     why: "Determines which quarter a closed-won deal falls into, so that actual revenue can be correctly assigned by time period.",
                     example: "closedate",
+                  },
+                  {
+                    q: "What field tracks when a deal was created?",
+                    why: "Determines when a deal entered the pipeline. Used for timing analysis to understand deal velocity and pipeline entry points.",
+                    example: "createdate",
                   },
                 ].map((item, i) => (
                   <Card key={i}>

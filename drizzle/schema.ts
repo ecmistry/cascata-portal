@@ -56,6 +56,7 @@ export interface SyncConfig {
   dealSqlTypeProperty: string;
   dealAmountProperty: string;
   dealCloseDateProperty: string;
+  dealCreatedDateProperty: string;
   closedWonStageIds: string[];
   newDealTypeValues: string[];
   upsellDealTypeValues: string[];

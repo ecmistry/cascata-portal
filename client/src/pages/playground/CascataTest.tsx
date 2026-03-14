@@ -149,6 +149,7 @@ export default function CascataTest() {
   const [dealSqlTypeProperty, setDealSqlTypeProperty] = useState("");
   const [dealAmountProperty, setDealAmountProperty] = useState("");
   const [dealCloseDateProperty, setDealCloseDateProperty] = useState("");
+  const [dealCreatedDateProperty, setDealCreatedDateProperty] = useState("");
   const [closedWonStageIds, setClosedWonStageIds] = useState<string[]>([]);
   const [newDealTypeValues, setNewDealTypeValues] = useState<string[]>([]);
   const [upsellDealTypeValues, setUpsellDealTypeValues] = useState<string[]>([]);
@@ -164,6 +165,7 @@ export default function CascataTest() {
       setDealSqlTypeProperty(savedConfig.dealSqlTypeProperty);
       setDealAmountProperty(savedConfig.dealAmountProperty);
       setDealCloseDateProperty(savedConfig.dealCloseDateProperty);
+      setDealCreatedDateProperty(savedConfig.dealCreatedDateProperty ?? "createdate");
       setClosedWonStageIds(savedConfig.closedWonStageIds);
       setNewDealTypeValues(savedConfig.newDealTypeValues);
       setUpsellDealTypeValues(savedConfig.upsellDealTypeValues);
@@ -197,6 +199,7 @@ export default function CascataTest() {
         dealSqlTypeProperty,
         dealAmountProperty,
         dealCloseDateProperty,
+        dealCreatedDateProperty,
         closedWonStageIds,
         newDealTypeValues,
         upsellDealTypeValues,
@@ -271,6 +274,7 @@ export default function CascataTest() {
               { q: "Where do you track the SQL type on deals?", purpose: "Links deals back to SQL motion", label: "dealSqlType", value: dealSqlTypeProperty, onChange: setDealSqlTypeProperty },
               { q: "What field captures deal value (ARR/ACV)?", purpose: "Calculates average deal value", label: "dealAmount", value: dealAmountProperty, onChange: setDealAmountProperty },
               { q: "What field tracks the close date?", purpose: "Determines deal timing for actuals", label: "closeDate", value: dealCloseDateProperty, onChange: setDealCloseDateProperty },
+              { q: "What field tracks when a deal was created?", purpose: "Determines when a deal entered the pipeline for timing analysis", label: "createdDate", value: dealCreatedDateProperty, onChange: setDealCreatedDateProperty },
             ] as const).map((item) => (
               <div key={item.label} className="rounded-lg border p-3 space-y-2">
                 <p className="text-sm font-medium">{item.q}</p>

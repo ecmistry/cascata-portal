@@ -27,6 +27,7 @@ interface MappingConfig {
   dealSqlTypeProperty: string;
   dealAmountProperty: string;
   dealCloseDateProperty: string;
+  dealCreatedDateProperty: string;
   contactRegionMap: Record<string, string>;
   dealRegionMap: Record<string, string>;
   sqlTypeMap: Record<string, string>;
@@ -49,6 +50,7 @@ const DEFAULT_MAPPING: MappingConfig = {
   dealSqlTypeProperty: "type_of_sql_associated_to_deal",
   dealAmountProperty: "amount",
   dealCloseDateProperty: "closedate",
+  dealCreatedDateProperty: "createdate",
 
   contactRegionMap: {
     "noram": "NORAM",
@@ -212,6 +214,7 @@ export async function syncFromHubSpot(
       dealSqlTypeProperty: storedConfig.dealSqlTypeProperty,
       dealAmountProperty: storedConfig.dealAmountProperty,
       dealCloseDateProperty: storedConfig.dealCloseDateProperty,
+      dealCreatedDateProperty: storedConfig.dealCreatedDateProperty ?? "createdate",
       closedWonStageIds: storedConfig.closedWonStageIds,
       newDealTypeValues: storedConfig.newDealTypeValues,
       upsellDealTypeValues: storedConfig.upsellDealTypeValues,
@@ -278,7 +281,7 @@ export async function syncFromHubSpot(
   // ── Extract deals ───────────────────────────────────────────────────
 
   console.log("[HubSpot Sync] Fetching deals...");
-  const dealProps = ["createdate", "lastmodifieddate", "hs_lastmodifieddate", "dealstage", "dealtype", cfg.dealAmountProperty, cfg.dealCloseDateProperty, cfg.dealRegionProperty, cfg.dealSqlTypeProperty];
+  const dealProps = ["createdate", "lastmodifieddate", "hs_lastmodifieddate", "dealstage", "dealtype", cfg.dealAmountProperty, cfg.dealCloseDateProperty, cfg.dealCreatedDateProperty, cfg.dealRegionProperty, cfg.dealSqlTypeProperty];
   let deals: HubSpotRecord[] = [];
   try {
     deals = await fetchAllRecords("deals", dealProps, dealModifiedFilter);

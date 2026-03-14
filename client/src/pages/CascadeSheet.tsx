@@ -148,12 +148,12 @@ export default function CascadeSheet() {
     <DashboardLayout>
       <div className="space-y-6">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex flex-col gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">
               {currentSheet?.label ?? `${cascadeData.motionDisplay} ${cascadeData.regionDisplay}`}
             </h1>
-            <p className="text-muted-foreground mt-1">
+            <p className="text-sm text-muted-foreground mt-1">
               {cascadeData.motionDisplay} motion &middot; {cascadeData.regionDisplay}
             </p>
           </div>
@@ -161,7 +161,7 @@ export default function CascadeSheet() {
             value={sheetKey}
             onValueChange={(v) => setLocation(`/cascade/${v}`)}
           >
-            <SelectTrigger className="w-[280px]">
+            <SelectTrigger className="w-full sm:w-[280px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -175,45 +175,45 @@ export default function CascadeSheet() {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
-              <Percent className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Conversion Rate</CardTitle>
+              <Percent className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pctFmt(cascadeData.conversionRate)}</div>
-              <p className="text-xs text-muted-foreground">SQL &rarr; Opportunity (avg)</p>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{pctFmt(cascadeData.conversionRate)}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">SQL &rarr; Opp (avg)</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Win Rate (New)</CardTitle>
-              <Target className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Win Rate (New)</CardTitle>
+              <Target className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{pctFmt(cascadeData.winRateNew)}</div>
-              <p className="text-xs text-muted-foreground">New business</p>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{pctFmt(cascadeData.winRateNew)}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">New business</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg ACV (New)</CardTitle>
-              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Avg ACV (New)</CardTitle>
+              <DollarSign className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{currFmt(cascadeData.acvNew)}</div>
-              <p className="text-xs text-muted-foreground">New deal average</p>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{currFmt(cascadeData.acvNew)}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">New deal average</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Avg ACV (Upsell)</CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-1 pt-4 px-4">
+              <CardTitle className="text-xs sm:text-sm font-medium">Avg ACV (Upsell)</CardTitle>
+              <TrendingUp className="h-3.5 w-3.5 text-muted-foreground hidden sm:block" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{currFmt(cascadeData.acvUpsell)}</div>
-              <p className="text-xs text-muted-foreground">Upsell deal average</p>
+            <CardContent className="px-4 pb-4">
+              <div className="text-xl sm:text-2xl font-bold">{currFmt(cascadeData.acvUpsell)}</div>
+              <p className="text-[10px] sm:text-xs text-muted-foreground">Upsell deal average</p>
             </CardContent>
           </Card>
         </div>
@@ -244,8 +244,8 @@ export default function CascadeSheet() {
             <CardTitle className="text-base">Cascade Model</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs border-collapse">
+            <div className="overflow-x-auto -mx-px">
+              <table className="w-full text-[10px] sm:text-xs border-collapse">
                 <thead>
                   <tr className="bg-muted/60">
                     <th className="sticky left-0 z-10 bg-muted/60 text-left p-2 font-semibold border-r min-w-[70px]">

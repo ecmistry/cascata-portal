@@ -357,8 +357,8 @@ export default function Dashboard() {
         <div className="container mx-auto p-4">
         {/* Clean Header */}
         <div className="mb-4">
-          <h1 className="text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
-          <p className="text-sm text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Overview of cascade model analytics and forecasts
             {timeRange && (
               <span className="ml-2 text-primary font-medium">
@@ -375,7 +375,7 @@ export default function Dashboard() {
               <CardDescription className="text-sm">Filter analytics by company, region, SQL type, year, or quarter</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
                 <div>
                   <label className="text-sm font-medium mb-2 block">Company</label>
                   <Select value={selectedCompany.toString()} onValueChange={(v) => setSelectedCompany(v === "all" ? "all" : parseInt(v))}>
@@ -467,7 +467,7 @@ export default function Dashboard() {
 
         {/* Overview KPIs - Clean Simple Cards */}
         {companies.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
             <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
                 <CardDescription className="text-sm text-muted-foreground mb-2">
@@ -482,7 +482,7 @@ export default function Dashboard() {
                     </span>
                   )}
                 </CardDescription>
-                <div className="text-3xl font-semibold text-foreground">{kpis.totalSQLs.toLocaleString()}</div>
+                <div className="text-xl sm:text-3xl font-semibold text-foreground">{kpis.totalSQLs.toLocaleString()}</div>
               </CardContent>
             </Card>
 
@@ -500,7 +500,7 @@ export default function Dashboard() {
                     </span>
                   )}
                 </CardDescription>
-                <div className="text-3xl font-semibold text-foreground">{kpis.totalOpps.toLocaleString()}</div>
+                <div className="text-xl sm:text-3xl font-semibold text-foreground">{kpis.totalOpps.toLocaleString()}</div>
               </CardContent>
             </Card>
 
@@ -518,14 +518,14 @@ export default function Dashboard() {
                     </span>
                   )}
                 </CardDescription>
-                <div className="text-3xl font-semibold text-foreground">{formatCurrency(kpis.totalRevenue)}</div>
+                <div className="text-xl sm:text-3xl font-semibold text-foreground">{formatCurrency(kpis.totalRevenue)}</div>
               </CardContent>
             </Card>
 
             <Card className="border border-border shadow-sm">
               <CardContent className="pt-6">
                 <CardDescription className="text-sm text-muted-foreground mb-2">Conversion Rate</CardDescription>
-                <div className="text-3xl font-semibold text-foreground">{kpis.avgConversionRate.toFixed(1)}%</div>
+                <div className="text-xl sm:text-3xl font-semibold text-foreground">{kpis.avgConversionRate.toFixed(1)}%</div>
               </CardContent>
             </Card>
           </div>
@@ -698,19 +698,27 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Hero / Empty State */}
         {companies.length === 0 && (
-          <Card className="text-center py-8">
-            <CardContent>
-              <Target className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Create your first model</h3>
-              <p className="text-muted-foreground mb-4">
-                Get started by creating a cascade model for your company
-              </p>
-              <Button onClick={() => setLocation("/setup")}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Model
-              </Button>
+          <Card className="overflow-hidden border border-border shadow-sm">
+            <CardContent className="p-0">
+              <div className="flex flex-col items-center px-6 py-10 sm:py-14">
+                <img
+                  src="/logo.png"
+                  alt="Cascata - Transform Forecasting"
+                  className="w-full max-w-2xl mb-8 drop-shadow-lg"
+                />
+                <h3 className="text-2xl sm:text-3xl font-bold text-foreground mb-3 text-center">
+                  Transform Your Revenue Forecasting
+                </h3>
+                <p className="text-muted-foreground text-center max-w-lg mb-6 text-sm sm:text-base leading-relaxed">
+                  Cascata turns your HubSpot data into quarter-by-quarter cascade forecasts, showing exactly how SQLs convert to opportunities and revenue over time.
+                </p>
+                <Button size="lg" onClick={() => setLocation("/configure-cascata")} className="px-8">
+                  <Plus className="w-4 h-4 mr-2" />
+                  Configure Cascata Environment
+                </Button>
+              </div>
             </CardContent>
           </Card>
         )}

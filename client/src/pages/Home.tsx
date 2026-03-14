@@ -26,13 +26,13 @@ export default function Home() {
   return (
     <DashboardLayout>
       <div className="min-h-screen bg-background">
-        <div className="container py-8 md:py-12">
+        <div className="container px-4 sm:px-6 py-6 md:py-12">
           <div className="mx-auto max-w-4xl">
 
             {/* Header */}
-            <div className="mb-12">
-              <h1 className="text-4xl font-bold tracking-tight mb-3">Cascata Portal Documentation</h1>
-              <p className="text-lg text-muted-foreground">
+            <div className="mb-8 sm:mb-12">
+              <h1 className="text-2xl sm:text-4xl font-bold tracking-tight mb-3">Cascata Portal Documentation</h1>
+              <p className="text-sm sm:text-lg text-muted-foreground">
                 A detailed guide to how Cascata forecasts revenue from your HubSpot CRM data.
               </p>
             </div>
@@ -74,7 +74,7 @@ export default function Home() {
             {/* 1. Overview */}
             <SectionAnchor id="overview" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-blue-500" />
                 1. What Cascata Does
               </h2>
@@ -139,7 +139,7 @@ export default function Home() {
             {/* 2. Data Pipeline */}
             <SectionAnchor id="data-pipeline" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Database className="h-5 w-5 text-purple-500" />
                 2. Data Pipeline (HubSpot ELT Sync)
               </h2>
@@ -211,7 +211,7 @@ export default function Home() {
             {/* 3. Configuration */}
             <SectionAnchor id="configuration" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Settings className="h-5 w-5 text-orange-500" />
                 3. Configuration Page
               </h2>
@@ -302,7 +302,7 @@ export default function Home() {
             {/* 4. Cascade Engine */}
             <SectionAnchor id="cascade-engine" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Zap className="h-5 w-5 text-yellow-500" />
                 4. The Cascade Calculation Engine
               </h2>
@@ -379,7 +379,7 @@ export default function Home() {
             {/* 5. Cascade Sheets */}
             <SectionAnchor id="cascade-sheets" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Layers className="h-5 w-5 text-indigo-500" />
                 5. Reading the Cascade Sheets
               </h2>
@@ -416,7 +416,7 @@ export default function Home() {
             {/* 6. Deal Classification */}
             <SectionAnchor id="deal-classification" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <GitBranch className="h-5 w-5 text-red-500" />
                 6. Deal Classification Explained
               </h2>
@@ -495,7 +495,7 @@ export default function Home() {
             {/* 7. Timing Distributions */}
             <SectionAnchor id="timing" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Clock className="h-5 w-5 text-teal-500" />
                 7. Timing Distributions
               </h2>
@@ -538,7 +538,7 @@ export default function Home() {
             {/* 8. Data Model */}
             <SectionAnchor id="data-model" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <Database className="h-5 w-5 text-slate-500" />
                 8. Internal Data Model
               </h2>
@@ -546,13 +546,13 @@ export default function Home() {
                 The database stores the following tables, all populated automatically from HubSpot:
               </p>
 
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-2 px-2">
+                <table className="w-full text-xs sm:text-sm border-collapse min-w-[500px]">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="text-left p-2.5 font-semibold border-b">Table</th>
-                      <th className="text-left p-2.5 font-semibold border-b">Content</th>
-                      <th className="text-left p-2.5 font-semibold border-b">Granularity</th>
+                      <th className="text-left p-2 sm:p-2.5 font-semibold border-b">Table</th>
+                      <th className="text-left p-2 sm:p-2.5 font-semibold border-b">Content</th>
+                      <th className="text-left p-2 sm:p-2.5 font-semibold border-b">Granularity</th>
                     </tr>
                   </thead>
                   <tbody className="text-muted-foreground">
@@ -604,7 +604,7 @@ export default function Home() {
             {/* 9. Daily Sync */}
             <SectionAnchor id="daily-sync" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <RefreshCw className="h-5 w-5 text-cyan-500" />
                 9. Daily Sync & Keeping Data Fresh
               </h2>
@@ -647,16 +647,16 @@ export default function Home() {
             {/* 10. Glossary */}
             <SectionAnchor id="glossary" />
             <div className="mb-12">
-              <h2 className="text-2xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl sm:text-2xl font-semibold mb-4 flex items-center gap-2">
                 <BarChart3 className="h-5 w-5 text-amber-500" />
                 10. Glossary
               </h2>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
+              <div className="overflow-x-auto -mx-2 px-2">
+                <table className="w-full text-xs sm:text-sm border-collapse min-w-[400px]">
                   <thead>
                     <tr className="bg-muted/50">
-                      <th className="text-left p-2.5 font-semibold border-b w-[180px]">Term</th>
-                      <th className="text-left p-2.5 font-semibold border-b">Definition</th>
+                      <th className="text-left p-2 sm:p-2.5 font-semibold border-b w-[120px] sm:w-[180px]">Term</th>
+                      <th className="text-left p-2 sm:p-2.5 font-semibold border-b">Definition</th>
                     </tr>
                   </thead>
                   <tbody className="text-muted-foreground">

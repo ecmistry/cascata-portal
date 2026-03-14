@@ -1,14 +1,6 @@
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { useState, useMemo, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Columns, Save, Check } from "lucide-react";
@@ -226,15 +218,15 @@ export default function CascataTest() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Configure Cascata Environment</h1>
-            <p className="text-muted-foreground mt-1">Map your HubSpot properties to the Cascata model</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Configure Cascata Environment</h1>
+            <p className="text-sm text-muted-foreground mt-1">Map your HubSpot properties to the Cascata model</p>
           </div>
           <Button
             onClick={handleSave}
             disabled={saveStatus === "saving"}
-            className="gap-2"
+            className="gap-2 w-full sm:w-auto"
           >
             {saveStatus === "saved" ? <Check className="h-4 w-4" /> : <Save className="h-4 w-4" />}
             {saveStatus === "saving" ? "Saving..." : saveStatus === "saved" ? "Saved" : "Save Configuration"}
@@ -246,89 +238,25 @@ export default function CascataTest() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Contact Properties</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Question</TableHead>
-                  <TableHead className="w-[35%]">HubSpot Property</TableHead>
-                  <TableHead className="w-[25%]">Purpose</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    Which field determines when someone became an SQL?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="sqlDate"
-                      columns={contactColumns}
-                      value={contactSqlDateProperty}
-                      onChange={setContactSqlDateProperty}
-                      isLoading={contactsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Assigns SQLs to quarters for the cascade
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    How do you identify contact teams/regions?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="contactRegion"
-                      columns={contactColumns}
-                      value={contactRegionProperty}
-                      onChange={setContactRegionProperty}
-                      isLoading={contactsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Groups SQLs by region/pod
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    What field tracks the type of SQL?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="sqlType"
-                      columns={contactColumns}
-                      value={contactSqlTypeProperty}
-                      onChange={setContactSqlTypeProperty}
-                      isLoading={contactsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Splits cascade by motion (Inbound, Outbound, etc.)
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    What date field tracks conversion to opportunity?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="oppDate"
-                      columns={contactColumns}
-                      value={contactOppDateProperty}
-                      onChange={setContactOppDateProperty}
-                      isLoading={contactsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Calculates SQL→Opp timing probabilities
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <CardContent className="space-y-4">
+            {([
+              { q: "Which field determines when someone became an SQL?", purpose: "Assigns SQLs to quarters", label: "sqlDate", value: contactSqlDateProperty, onChange: setContactSqlDateProperty },
+              { q: "How do you identify contact teams/regions?", purpose: "Groups SQLs by region/pod", label: "contactRegion", value: contactRegionProperty, onChange: setContactRegionProperty },
+              { q: "What field tracks the type of SQL?", purpose: "Splits cascade by motion", label: "sqlType", value: contactSqlTypeProperty, onChange: setContactSqlTypeProperty },
+              { q: "What date field tracks conversion to opportunity?", purpose: "Calculates SQL→Opp timing", label: "oppDate", value: contactOppDateProperty, onChange: setContactOppDateProperty },
+            ] as const).map((item) => (
+              <div key={item.label} className="rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">{item.q}</p>
+                <ColumnPicker
+                  label={item.label}
+                  columns={contactColumns}
+                  value={item.value}
+                  onChange={item.onChange}
+                  isLoading={contactsLoading}
+                />
+                <p className="text-xs text-muted-foreground">{item.purpose}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
 
@@ -337,89 +265,25 @@ export default function CascataTest() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Deal Properties</CardTitle>
           </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-[40%]">Question</TableHead>
-                  <TableHead className="w-[35%]">HubSpot Property</TableHead>
-                  <TableHead className="w-[25%]">Purpose</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    How do you identify deal teams/regions?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="dealRegion"
-                      columns={dealColumns}
-                      value={dealRegionProperty}
-                      onChange={setDealRegionProperty}
-                      isLoading={dealsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Groups deals by region/pod
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    Where do you track the SQL type on deals?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="dealSqlType"
-                      columns={dealColumns}
-                      value={dealSqlTypeProperty}
-                      onChange={setDealSqlTypeProperty}
-                      isLoading={dealsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Links deals back to SQL motion
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    What field captures deal value (ARR/ACV)?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="dealAmount"
-                      columns={dealColumns}
-                      value={dealAmountProperty}
-                      onChange={setDealAmountProperty}
-                      isLoading={dealsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Calculates average deal value
-                  </TableCell>
-                </TableRow>
-
-                <TableRow>
-                  <TableCell className="font-medium text-sm">
-                    What field tracks the close date?
-                  </TableCell>
-                  <TableCell>
-                    <ColumnPicker
-                      label="closeDate"
-                      columns={dealColumns}
-                      value={dealCloseDateProperty}
-                      onChange={setDealCloseDateProperty}
-                      isLoading={dealsLoading}
-                    />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    Determines deal timing for actuals
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <CardContent className="space-y-4">
+            {([
+              { q: "How do you identify deal teams/regions?", purpose: "Groups deals by region/pod", label: "dealRegion", value: dealRegionProperty, onChange: setDealRegionProperty },
+              { q: "Where do you track the SQL type on deals?", purpose: "Links deals back to SQL motion", label: "dealSqlType", value: dealSqlTypeProperty, onChange: setDealSqlTypeProperty },
+              { q: "What field captures deal value (ARR/ACV)?", purpose: "Calculates average deal value", label: "dealAmount", value: dealAmountProperty, onChange: setDealAmountProperty },
+              { q: "What field tracks the close date?", purpose: "Determines deal timing for actuals", label: "closeDate", value: dealCloseDateProperty, onChange: setDealCloseDateProperty },
+            ] as const).map((item) => (
+              <div key={item.label} className="rounded-lg border p-3 space-y-2">
+                <p className="text-sm font-medium">{item.q}</p>
+                <ColumnPicker
+                  label={item.label}
+                  columns={dealColumns}
+                  value={item.value}
+                  onChange={item.onChange}
+                  isLoading={dealsLoading}
+                />
+                <p className="text-xs text-muted-foreground">{item.purpose}</p>
+              </div>
+            ))}
           </CardContent>
         </Card>
 

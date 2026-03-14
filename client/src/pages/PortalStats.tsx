@@ -78,8 +78,8 @@ export default function PortalStats() {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Portal Stats & Performance</h1>
-            <p className="text-muted-foreground mt-2">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Portal Stats & Performance</h1>
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1 sm:mt-2">
               Monitor portal performance, system resources, and database health
             </p>
           </div>
@@ -95,7 +95,7 @@ export default function PortalStats() {
         </div>
 
         {/* Key Metrics */}
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total Models</CardTitle>
@@ -205,7 +205,7 @@ export default function PortalStats() {
         {/* EC2 Instance Resources */}
         {metrics && (
           <>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 grid-cols-2 lg:grid-cols-4">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                   <CardTitle className="text-sm font-medium">CPU Usage</CardTitle>

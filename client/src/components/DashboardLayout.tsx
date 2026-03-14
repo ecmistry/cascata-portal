@@ -209,7 +209,7 @@ function DashboardLayoutContent({
           disableTransition={isResizing}
         >
           <SidebarHeader className="h-12 border-b border-sidebar-border">
-            <div className="flex items-center gap-2 px-3 transition-all w-full">
+            <div className="flex items-center gap-2 px-2 sm:px-3 transition-all w-full">
               {isCollapsed ? (
                 <div className="relative h-6 w-6 shrink-0">
                   <img
@@ -463,22 +463,22 @@ function DashboardLayoutContent({
 
       <SidebarInset>
         {/* Thin top bar */}
-        <div className="flex border-b h-12 items-center justify-between bg-white px-4 sticky top-0 z-40">
-          <div className="flex items-center gap-3">
-            {isMobile && <SidebarTrigger className="h-8 w-8" />}
+        <div className="flex border-b h-12 items-center justify-between bg-white px-2 sm:px-4 sticky top-0 z-40">
+          <div className="flex items-center gap-1 sm:gap-3">
+            {isMobile && <SidebarTrigger className="h-9 w-9" />}
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setLocation("/")}
-              className={`h-8 text-sm ${
+              className={`h-9 text-xs sm:text-sm ${
                 location === "/" ? "text-foreground font-medium" : "text-muted-foreground"
               }`}
             >
-              <LayoutDashboard className="h-4 w-4 mr-1.5" />
-              Dashboard
+              <LayoutDashboard className="h-4 w-4 sm:mr-1.5" />
+              <span className="hidden sm:inline">Dashboard</span>
             </Button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             {(location.startsWith("/performance/") || location.startsWith("/bigquery/") || location.startsWith("/whatif/") || location.startsWith("/scenarios/")) && (
               <Button 
                 variant="ghost" 
@@ -496,29 +496,30 @@ function DashboardLayoutContent({
                   }
                   setLocation(`/model/${companyId}`);
                 }}
-                className="h-8 text-sm text-muted-foreground"
+                className="h-9 text-xs sm:text-sm text-muted-foreground"
               >
-                <ArrowLeft className="h-4 w-4 mr-1.5" />
-                Back to Model
+                <ArrowLeft className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Back to Model</span>
               </Button>
             )}
             <Button 
               variant="ghost" 
               size="sm" 
               onClick={() => setLocation("/how-it-works")}
-              className="h-8 text-sm text-muted-foreground"
+              className="h-9 text-xs sm:text-sm text-muted-foreground"
             >
-              How it Works
+              <span className="hidden sm:inline">How it Works</span>
+              <span className="sm:hidden">Docs</span>
             </Button>
             {user ? (
               <Button 
                 variant="ghost" 
                 size="sm" 
                 onClick={() => window.location.reload()}
-                className="h-8 text-sm text-muted-foreground"
+                className="h-9 text-xs sm:text-sm text-muted-foreground"
               >
-                <RefreshCw className="h-4 w-4 mr-1.5" />
-                Refresh
+                <RefreshCw className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Refresh</span>
               </Button>
             ) : (
               <Button
@@ -526,14 +527,14 @@ function DashboardLayoutContent({
                 onClick={() => {
                   window.location.href = "/login";
                 }}
-                className="h-8 text-sm"
+                className="h-9 text-xs sm:text-sm"
               >
                 Login
               </Button>
             )}
           </div>
         </div>
-        <main className="flex-1 bg-white p-6">{children}</main>
+        <main className="flex-1 bg-white p-3 sm:p-6">{children}</main>
       </SidebarInset>
     </>
   );

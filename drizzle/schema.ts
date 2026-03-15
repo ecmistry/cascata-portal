@@ -64,6 +64,12 @@ export interface SyncConfig {
   sqlTypeAliases?: Record<string, string>;
   fallbackRegion?: string;
   fallbackSqlType?: string;
+  // Configurable model defaults (used when insufficient data to derive from actuals)
+  defaultSqlTimingSameQ?: number;    // basis points, e.g. 8900 = 89%
+  defaultSqlTimingNextQ?: number;    // basis points, e.g. 1000 = 10%
+  defaultSqlTimingTwoQ?: number;     // basis points, e.g. 100 = 1%
+  defaultOppTiming?: number[];       // fractions, e.g. [0.14, 0.33, 0.25, 0.15, 0.07, 0.04, 0.02]
+  defaultConversionRate?: number;    // basis points, e.g. 5000 = 50%
 }
 
 /**

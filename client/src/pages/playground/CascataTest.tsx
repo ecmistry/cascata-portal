@@ -246,6 +246,11 @@ export default function CascataTest() {
   const [sqlTypeAliases, setSqlTypeAliases] = useState<Record<string, string>>({});
   const [fallbackRegion, setFallbackRegion] = useState("");
   const [fallbackSqlType, setFallbackSqlType] = useState("");
+  const [defaultSqlTimingSameQ, setDefaultSqlTimingSameQ] = useState(8900);
+  const [defaultSqlTimingNextQ, setDefaultSqlTimingNextQ] = useState(1000);
+  const [defaultSqlTimingTwoQ, setDefaultSqlTimingTwoQ] = useState(100);
+  const [defaultOppTiming, setDefaultOppTiming] = useState("14, 33, 25, 15, 7, 4, 2");
+  const [defaultConversionRate, setDefaultConversionRate] = useState(5000);
 
   // Initialize from saved config
   useEffect(() => {
@@ -266,6 +271,13 @@ export default function CascataTest() {
       setSqlTypeAliases(savedConfig.sqlTypeAliases ?? {});
       setFallbackRegion(savedConfig.fallbackRegion ?? "");
       setFallbackSqlType(savedConfig.fallbackSqlType ?? "");
+      setDefaultSqlTimingSameQ(savedConfig.defaultSqlTimingSameQ ?? 8900);
+      setDefaultSqlTimingNextQ(savedConfig.defaultSqlTimingNextQ ?? 1000);
+      setDefaultSqlTimingTwoQ(savedConfig.defaultSqlTimingTwoQ ?? 100);
+      if (savedConfig.defaultOppTiming) {
+        setDefaultOppTiming(savedConfig.defaultOppTiming.map((v: number) => Math.round(v * 100)).join(", "));
+      }
+      setDefaultConversionRate(savedConfig.defaultConversionRate ?? 5000);
     }
   }, [savedConfig]);
 
@@ -304,6 +316,11 @@ export default function CascataTest() {
         sqlTypeAliases: Object.keys(sqlTypeAliases).length > 0 ? sqlTypeAliases : undefined,
         fallbackRegion: fallbackRegion || undefined,
         fallbackSqlType: fallbackSqlType || undefined,
+        defaultSqlTimingSameQ,
+        defaultSqlTimingNextQ,
+        defaultSqlTimingTwoQ,
+        defaultOppTiming: defaultOppTiming.split(",").map(v => parseFloat(v.trim()) / 100).filter(v => !isNaN(v)),
+        defaultConversionRate,
       },
     });
   };
@@ -593,6 +610,109 @@ export default function CascataTest() {
                     className="h-8 text-xs"
                   />
                 )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Model Defaults */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Model Defaults</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Fallback values used when there isn't enough historical data to derive timing distributions or conversion rates
+              (e.g. fewer than 5 data points for a motion). These are overridden by real data when available.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="rounded-lg border p-4">
+              <Label className="text-sm font-medium">SQL Timing Distribution (SQL &rarr; Opportunity)</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Default probability of an SQL converting to an opportunity in the same quarter, next quarter, or two quarters later.
+                Values are in basis points (8900 = 89%). Must sum to 10000.
+              </p>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Same Quarter</Label>
+                  <Input
+                    type="number"
+                    value={defaultSqlTimingSameQ}
+                    onChange={(e) => setDefaultSqlTimingSameQ(Number(e.target.value))}
+                    className="h-8 text-xs"
+                    min={0} max={10000}
+                  />
+                  <span className="text-[10px] text-muted-foreground">{(defaultSqlTimingSameQ / 100).toFixed(1)}%</span>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">Next Quarter</Label>
+                  <Input
+                    type="number"
+                    value={defaultSqlTimingNextQ}
+                    onChange={(e) => setDefaultSqlTimingNextQ(Number(e.target.value))}
+                    className="h-8 text-xs"
+                    min={0} max={10000}
+                  />
+                  <span className="text-[10px] text-muted-foreground">{(defaultSqlTimingNextQ / 100).toFixed(1)}%</span>
+                </div>
+                <div>
+                  <Label className="text-[10px] text-muted-foreground">+2 Quarters</Label>
+                  <Input
+                    type="number"
+                    value={defaultSqlTimingTwoQ}
+                    onChange={(e) => setDefaultSqlTimingTwoQ(Number(e.target.value))}
+                    className="h-8 text-xs"
+                    min={0} max={10000}
+                  />
+                  <span className="text-[10px] text-muted-foreground">{(defaultSqlTimingTwoQ / 100).toFixed(1)}%</span>
+                </div>
+              </div>
+              {defaultSqlTimingSameQ + defaultSqlTimingNextQ + defaultSqlTimingTwoQ !== 10000 && (
+                <p className="text-[10px] text-amber-600 mt-1">
+                  Sum is {defaultSqlTimingSameQ + defaultSqlTimingNextQ + defaultSqlTimingTwoQ} bp (should be 10000)
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <Label className="text-sm font-medium">Opp Win Timing Distribution (Opportunity &rarr; Deal Won)</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Default probability of an opportunity closing as won in each quarter after creation.
+                Enter comma-separated percentages (e.g. "14, 33, 25, 15, 7, 4, 2" means 14% same quarter,
+                33% next quarter, etc.). These should sum to approximately 100.
+              </p>
+              <Input
+                value={defaultOppTiming}
+                onChange={(e) => setDefaultOppTiming(e.target.value)}
+                placeholder="14, 33, 25, 15, 7, 4, 2"
+                className="h-8 text-xs"
+              />
+              {(() => {
+                const vals = defaultOppTiming.split(",").map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+                const sum = vals.reduce((s, v) => s + v, 0);
+                return (
+                  <p className="text-[10px] text-muted-foreground mt-1">
+                    {vals.length} quarters, sum = {sum.toFixed(1)}%
+                    {Math.abs(sum - 100) > 1 && <span className="text-amber-600 ml-1">(should be ~100%)</span>}
+                  </p>
+                );
+              })()}
+            </div>
+
+            <div className="rounded-lg border p-4">
+              <Label className="text-sm font-medium">Default Conversion Rate (SQL &rarr; Opportunity)</Label>
+              <p className="text-xs text-muted-foreground mt-1 mb-3">
+                Fallback SQL-to-Opportunity conversion rate used for quarters with no actual data.
+                Value in basis points (5000 = 50%).
+              </p>
+              <div className="flex items-center gap-3">
+                <Input
+                  type="number"
+                  value={defaultConversionRate}
+                  onChange={(e) => setDefaultConversionRate(Number(e.target.value))}
+                  className="h-8 text-xs w-32"
+                  min={0} max={10000}
+                />
+                <span className="text-sm text-muted-foreground">{(defaultConversionRate / 100).toFixed(1)}%</span>
               </div>
             </div>
           </CardContent>

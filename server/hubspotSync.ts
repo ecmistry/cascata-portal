@@ -388,6 +388,8 @@ export async function syncFromHubSpot(
 
   console.log("[HubSpot Sync] Building SQL history...");
   const sqlVolumes = new Map<string, number>(); // "regionName|sqlTypeName|year|quarter" → volume
+  const oppVolumes = new Map<string, number>(); // contacts with opp dates, keyed by SQL date quarter
+  const oppByMotionRegion = new Map<string, number>(); // "region|sqlType" → opp count (aggregate)
   dq.contactsFetched = contacts.length;
 
   for (const c of contacts) {
@@ -433,6 +435,13 @@ export async function syncFromHubSpot(
     dq.contactsUsed++;
     const key = `${region}|${sqlType}|${qtr.year}|${qtr.quarter}`;
     sqlVolumes.set(key, (sqlVolumes.get(key) || 0) + 1);
+
+    // Count opportunities from contacts with opp dates (by SQL date quarter)
+    if (oppDateRaw && !isNaN(new Date(oppDateRaw).getTime())) {
+      oppVolumes.set(key, (oppVolumes.get(key) || 0) + 1);
+      const crKey = `${region}|${sqlType}`;
+      oppByMotionRegion.set(crKey, (oppByMotionRegion.get(crKey) || 0) + 1);
+    }
   }
 
   dq.coveragePct = dq.contactsFetched > 0 ? Math.round((dq.contactsUsed / dq.contactsFetched) * 10000) / 100 : 0;
@@ -532,13 +541,28 @@ export async function syncFromHubSpot(
     actualRevenues.set(key, existing);
   }
 
-  // Add SQL counts to actuals from SQL history we already computed
+  // Build unified actuals from contacts (SQLs + Opps by SQL date) and deals (revenue by close date)
+  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number }>();
+
   for (const [key, volume] of sqlVolumes) {
-    const act = actualRevenues.get(key);
-    if (act) act.sqls = volume;
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    existing.sqls = volume;
+    unifiedActuals.set(key, existing);
+  }
+
+  for (const [key, count] of oppVolumes) {
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    existing.opps = count;
+    unifiedActuals.set(key, existing);
   }
 
   for (const [key, act] of actualRevenues) {
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    existing.revenue += act.revenue;
+    unifiedActuals.set(key, existing);
+  }
+
+  for (const [key, act] of unifiedActuals) {
     const [region, sqlType, yearStr, quarterStr] = key.split("|");
     try {
       await db.upsertActual({
@@ -562,10 +586,10 @@ export async function syncFromHubSpot(
 
   console.log("[HubSpot Sync] Calculating conversion rates...");
 
-  // Count SQLs, opportunities, and closed-won by region × sqlType
+  // Count SQLs, opportunities (from contacts), and closed-won (from deals) by region × sqlType
   const crData = new Map<string, { sqls: number; opps: number; wonNew: number; wonUpsell: number }>();
 
-  // SQLs
+  // SQLs from contacts
   for (const [key, volume] of sqlVolumes) {
     const parts = key.split("|");
     const crKey = `${parts[0]}|${parts[1]}`;
@@ -574,7 +598,14 @@ export async function syncFromHubSpot(
     crData.set(crKey, existing);
   }
 
-  // Opportunities and closed-won from deals
+  // Opportunities from contacts (those with opp dates)
+  for (const [crKey, count] of oppByMotionRegion) {
+    const existing = crData.get(crKey) || { sqls: 0, opps: 0, wonNew: 0, wonUpsell: 0 };
+    existing.opps = count;
+    crData.set(crKey, existing);
+  }
+
+  // Closed-won counts from deals (for win rate calculation)
   for (const d of deals) {
     const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
     const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
@@ -584,19 +615,11 @@ export async function syncFromHubSpot(
     const crKey = `${region}|${sqlType}`;
     const existing = crData.get(crKey) || { sqls: 0, opps: 0, wonNew: 0, wonUpsell: 0 };
 
-    const stage = (d.properties.dealstage ?? "").toLowerCase();
-    if (cfg.closedWonStageIds.includes(stage)) {
-      existing.opps += 1;
-      const dealType = d.properties.dealtype ?? "";
-      if (cfg.upsellDealTypeValues.includes(dealType)) {
-        existing.wonUpsell += 1;
-      } else if (cfg.newDealTypeValues.includes(dealType)) {
-        existing.wonNew += 1;
-      } else {
-        existing.wonNew += 1; // default to new
-      }
-    } else if (stage && stage !== "closedlost" && stage !== "closed lost") {
-      existing.opps += 1;
+    const dealType = d.properties.dealtype ?? "";
+    if (cfg.upsellDealTypeValues.includes(dealType)) {
+      existing.wonUpsell += 1;
+    } else {
+      existing.wonNew += 1;
     }
 
     crData.set(crKey, existing);
@@ -606,7 +629,9 @@ export async function syncFromHubSpot(
     const [region, sqlType] = crKey.split("|");
     if (data.sqls === 0) continue;
 
-    const oppCoverageRatio = Math.round((data.opps / data.sqls) * 10000); // basis points
+    // oppCoverageRatio: true SQL→Opp rate (contacts with opp date / contacts with SQL date)
+    const oppCoverageRatio = Math.round((data.opps / data.sqls) * 10000);
+    // winRateNew/Upsell: probability of opp becoming new business / upsell win
     const winRateNew = data.opps > 0 ? Math.round((data.wonNew / data.opps) * 10000) : 0;
     const winRateUpsell = data.opps > 0 ? Math.round((data.wonUpsell / data.opps) * 10000) : 0;
 

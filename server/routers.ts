@@ -655,6 +655,11 @@ export const appRouter = router({
           sqlTypeAliases: {},
           fallbackRegion: "",
           fallbackSqlType: "",
+          defaultSqlTimingSameQ: 8900,
+          defaultSqlTimingNextQ: 1000,
+          defaultSqlTimingTwoQ: 100,
+          defaultOppTiming: [0.14, 0.33, 0.25, 0.15, 0.07, 0.04, 0.02],
+          defaultConversionRate: 5000,
         };
       }),
 
@@ -678,6 +683,11 @@ export const appRouter = router({
           sqlTypeAliases: z.record(z.string(), z.string()).optional(),
           fallbackRegion: z.string().optional(),
           fallbackSqlType: z.string().optional(),
+          defaultSqlTimingSameQ: z.number().int().min(0).max(10000).optional(),
+          defaultSqlTimingNextQ: z.number().int().min(0).max(10000).optional(),
+          defaultSqlTimingTwoQ: z.number().int().min(0).max(10000).optional(),
+          defaultOppTiming: z.array(z.number().min(0).max(1)).optional(),
+          defaultConversionRate: z.number().int().min(0).max(10000).optional(),
         }),
       }))
       .mutation(async ({ input }) => {

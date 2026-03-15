@@ -62,7 +62,6 @@ function getQuarterAhead(year: number, quarter: number, periods: number): Quarte
 export async function calculateCascade(input: CascadeInput): Promise<CascadeResult[]> {
   const { companyId, startYear, startQuarter, forecastYears } = input;
 
-  // Fetch all necessary data - use db functions which support dev store
   const [
     regionsList,
     sqlTypesList,
@@ -70,6 +69,8 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     conversionRatesData,
     dealEconomicsData,
     timeDistData,
+    actualsData,
+    company,
   ] = await Promise.all([
     db.getRegionsByCompany(companyId).then(regions => regions.filter(r => r.enabled)),
     db.getSqlTypesByCompany(companyId).then(types => types.filter(t => t.enabled)),
@@ -77,13 +78,15 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     db.getConversionRatesByCompany(companyId),
     db.getDealEconomicsByCompany(companyId),
     db.getTimeDistributionsByCompany(companyId),
+    db.getActualsByCompany(companyId),
+    db.getCompanyById(companyId),
   ]);
 
-  // Build lookup maps
+  const syncConfig = company ? db.parseSyncConfig(company) : null;
+
   const conversionMap = new Map<string, typeof conversionRatesData[0]>();
   conversionRatesData.forEach(cr => {
-    const key = `${cr.regionId}-${cr.sqlTypeId}`;
-    conversionMap.set(key, cr);
+    conversionMap.set(`${cr.regionId}-${cr.sqlTypeId}`, cr);
   });
 
   const dealEconomicsMap = new Map<number, typeof dealEconomicsData[0]>();
@@ -96,106 +99,129 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     timeDistMap.set(td.sqlTypeId, td);
   });
 
-  // Default time distribution if not specified (89/10/1%)
-  const defaultTimeDist = {
-    sameQuarterPct: CASCADE_CONSTANTS.DEFAULT_SAME_QUARTER_PCT,
-    nextQuarterPct: CASCADE_CONSTANTS.DEFAULT_NEXT_QUARTER_PCT,
-    twoQuarterPct: CASCADE_CONSTANTS.DEFAULT_TWO_QUARTER_PCT,
-  };
+  // Build per-quarter actuals for per-quarter conversion rates
+  const quarterActualsMap = new Map<string, { sqls: number; opps: number }>();
+  for (const a of actualsData) {
+    const key = `${a.regionId}-${a.sqlTypeId}-${a.year}-${a.quarter}`;
+    const existing = quarterActualsMap.get(key) || { sqls: 0, opps: 0 };
+    existing.sqls += a.actualSqls ?? 0;
+    existing.opps += a.actualOpps ?? 0;
+    quarterActualsMap.set(key, existing);
+  }
+
+  // Configurable defaults from sync config
+  const defaultSameQ = syncConfig?.defaultSqlTimingSameQ ?? CASCADE_CONSTANTS.DEFAULT_SAME_QUARTER_PCT;
+  const defaultNextQ = syncConfig?.defaultSqlTimingNextQ ?? CASCADE_CONSTANTS.DEFAULT_NEXT_QUARTER_PCT;
+  const defaultTwoQ = syncConfig?.defaultSqlTimingTwoQ ?? CASCADE_CONSTANTS.DEFAULT_TWO_QUARTER_PCT;
+  const defaultConvRate = syncConfig?.defaultConversionRate ?? CASCADE_CONSTANTS.DEFAULT_COVERAGE_RATIO_BP;
 
   const results: CascadeResult[] = [];
-
-  // Generate forecast for each region, SQL type, and quarter
   const totalQuarters = forecastYears * 4;
 
-  for (let quarterOffset = 0; quarterOffset < totalQuarters; quarterOffset++) {
-    const currentQuarter = getQuarterAhead(startYear, startQuarter, quarterOffset);
+  for (const region of regionsList) {
+    for (const sqlType of sqlTypesList) {
+      const convKey = `${region.id}-${sqlType.id}`;
+      const conversion = conversionMap.get(convKey);
 
-    for (const region of regionsList) {
-      for (const sqlType of sqlTypesList) {
-        // Get SQL volume for this quarter (from history or projection)
+      // Compute overall average conversion from actuals for this region+sqlType
+      let totalActualSqls = 0;
+      let totalActualOpps = 0;
+      for (const a of actualsData) {
+        if (a.regionId === region.id && a.sqlTypeId === sqlType.id) {
+          totalActualSqls += a.actualSqls ?? 0;
+          totalActualOpps += a.actualOpps ?? 0;
+        }
+      }
+      const overallConvRate = totalActualSqls > 0
+        ? Math.min(Math.round((totalActualOpps / totalActualSqls) * 10000), 10000)
+        : (conversion?.oppCoverageRatio || defaultConvRate);
+
+      const timeDist = timeDistMap.get(sqlType.id);
+      const sameQ = timeDist?.sameQuarterPct ?? defaultSameQ;
+      const nextQ = timeDist?.nextQuarterPct ?? defaultNextQ;
+      const twoQ = timeDist?.twoQuarterPct ?? defaultTwoQ;
+
+      // Opp win timing
+      let oppProbs: number[] = syncConfig?.defaultOppTiming ?? [0.14, 0.33, 0.25, 0.15, 0.07, 0.04, 0.02];
+      if (timeDist?.oppTimingJson) {
+        try {
+          const parsed = JSON.parse(timeDist.oppTimingJson);
+          if (Array.isArray(parsed) && parsed.length >= 2) oppProbs = parsed;
+        } catch { /* use default */ }
+      }
+
+      // Win rates
+      const winRateNew = (conversion?.winRateNew ?? CASCADE_CONSTANTS.DEFAULT_WIN_RATE_BP) / 10000;
+      const winRateUpsell = (conversion?.winRateUpsell ?? 0) / 10000;
+      const combinedWinRate = winRateNew + winRateUpsell;
+
+      const dealEcon = dealEconomicsMap.get(region.id);
+      const avgAcvNew = dealEcon?.acvNew || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
+      const avgAcvUpsell = dealEcon?.acvUpsell || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
+
+      // Pre-calculate base opps per quarter (SQL volume × conversion rate)
+      const baseOpps: number[] = [];
+      for (let qo = 0; qo < totalQuarters; qo++) {
+        const q = getQuarterAhead(startYear, startQuarter, qo);
         const historyRecord = sqlHistoryData.find(
-          h =>
-            h.regionId === region.id &&
-            h.sqlTypeId === sqlType.id &&
-            h.year === currentQuarter.year &&
-            h.quarter === currentQuarter.quarter
+          h => h.regionId === region.id && h.sqlTypeId === sqlType.id &&
+               h.year === q.year && h.quarter === q.quarter
         );
-
         const sqlVolume = historyRecord?.volume || 0;
 
-        // Get conversion rate
-        const convKey = `${region.id}-${sqlType.id}`;
-        const conversion = conversionMap.get(convKey);
-        const coverageRatio = conversion?.oppCoverageRatio || CASCADE_CONSTANTS.DEFAULT_COVERAGE_RATIO_BP;
+        // Use per-quarter conversion from actuals when available
+        const aKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
+        const actualData = quarterActualsMap.get(aKey);
+        let convRate: number;
+        if (actualData && actualData.sqls > 0) {
+          convRate = Math.min(Math.round((actualData.opps / actualData.sqls) * 10000), 10000);
+        } else {
+          convRate = overallConvRate;
+        }
+        baseOpps.push((sqlVolume * convRate) / 10000);
+      }
 
-        // Get time distribution
-        const timeDist = timeDistMap.get(sqlType.id) || defaultTimeDist;
+      // Apply SQL timing distribution: spread opps across quarters
+      const totalOppsPerQ = new Array(totalQuarters).fill(0);
+      for (let qo = 0; qo < totalQuarters; qo++) {
+        const bo = baseOpps[qo];
+        if (bo === 0) continue;
+        if (qo < totalQuarters) totalOppsPerQ[qo] += bo * sameQ / 10000;
+        if (qo + 1 < totalQuarters) totalOppsPerQ[qo + 1] += bo * nextQ / 10000;
+        if (qo + 2 < totalQuarters) totalOppsPerQ[qo + 2] += bo * twoQ / 10000;
+      }
 
-        // Calculate opportunities created from SQLs in this quarter
-        const baseOpportunities = (sqlVolume * coverageRatio) / 10000; // Convert basis points
-
-        // Calculate opportunities that appear in THIS quarter
-        // This includes:
-        // 1. Opportunities from current quarter's SQLs (89%)
-        // 2. Opportunities from previous quarter's SQLs (10%)
-        // 3. Opportunities from two quarters ago SQLs (1%)
-        let totalOpportunities = 0;
-
-        // Opportunities from current quarter's SQLs
-        const oppFromCurrentQuarter = (baseOpportunities * timeDist.sameQuarterPct) / 10000;
-        totalOpportunities += oppFromCurrentQuarter;
-
-        // Opportunities from previous quarter's SQLs (flowing into this quarter)
-        if (quarterOffset > 0) {
-          const prevQuarter = getQuarterAhead(startYear, startQuarter, quarterOffset - 1);
-          const prevHistoryRecord = sqlHistoryData.find(
-            h =>
-              h.regionId === region.id &&
-              h.sqlTypeId === sqlType.id &&
-              h.year === prevQuarter.year &&
-              h.quarter === prevQuarter.quarter
-          );
-          if (prevHistoryRecord) {
-            const prevBaseOpps = (prevHistoryRecord.volume * coverageRatio) / 10000;
-            const oppFromPrevQuarter = (prevBaseOpps * timeDist.nextQuarterPct) / 10000;
-            totalOpportunities += oppFromPrevQuarter;
+      // Apply opp win timing: spread expected wins across quarters
+      const totalWinsPerQ = new Array(totalQuarters).fill(0);
+      for (let qo = 0; qo < totalQuarters; qo++) {
+        const expectedWins = totalOppsPerQ[qo] * (combinedWinRate > 0 ? combinedWinRate : 1);
+        for (let p = 0; p < oppProbs.length; p++) {
+          if (qo + p < totalQuarters) {
+            totalWinsPerQ[qo + p] += expectedWins * oppProbs[p];
           }
         }
+      }
 
-        // Opportunities from two quarters ago SQLs (flowing into this quarter)
-        if (quarterOffset > 1) {
-          const twoQuartersAgo = getQuarterAhead(startYear, startQuarter, quarterOffset - 2);
-          const twoQuartersAgoRecord = sqlHistoryData.find(
-            h =>
-              h.regionId === region.id &&
-              h.sqlTypeId === sqlType.id &&
-              h.year === twoQuartersAgo.year &&
-              h.quarter === twoQuartersAgo.quarter
-          );
-          if (twoQuartersAgoRecord) {
-            const twoQuartersAgoBaseOpps = (twoQuartersAgoRecord.volume * coverageRatio) / 10000;
-            const oppFromTwoQuartersAgo = (twoQuartersAgoBaseOpps * timeDist.twoQuarterPct) / 10000;
-            totalOpportunities += oppFromTwoQuartersAgo;
-          }
-        }
+      // Build results with revenue
+      for (let qo = 0; qo < totalQuarters; qo++) {
+        const q = getQuarterAhead(startYear, startQuarter, qo);
+        const historyRecord = sqlHistoryData.find(
+          h => h.regionId === region.id && h.sqlTypeId === sqlType.id &&
+               h.year === q.year && h.quarter === q.quarter
+        );
 
-        // Calculate revenue
-        const dealEcon = dealEconomicsMap.get(region.id);
-        const winRate = conversion?.winRateNew || CASCADE_CONSTANTS.DEFAULT_WIN_RATE_BP;
-        const avgAcv = dealEcon?.acvNew || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
-
-        const closedWonOpps = (totalOpportunities * winRate) / 10000;
-        const revenue = Math.round(closedWonOpps * avgAcv);
+        const wins = totalWinsPerQ[qo];
+        const revenueNew = Math.round(wins * (winRateNew / (combinedWinRate || 1)) * avgAcvNew);
+        const revenueUpsell = Math.round(wins * (winRateUpsell / (combinedWinRate || 1)) * avgAcvUpsell);
 
         results.push({
           region: region.name,
           sqlType: sqlType.name,
-          year: currentQuarter.year,
-          quarter: currentQuarter.quarter,
-          sqlVolume,
-          opportunities: Math.round(totalOpportunities),
-          revenue,
+          year: q.year,
+          quarter: q.quarter,
+          sqlVolume: historyRecord?.volume || 0,
+          opportunities: Math.round(totalOppsPerQ[qo]),
+          revenue: revenueNew + revenueUpsell,
         });
       }
     }
@@ -292,14 +318,31 @@ export async function saveCascadeResults(companyId: number, results: CascadeResu
  */
 export async function runCascadeForecast(
   companyId: number,
-  startYear: number = CASCADE_CONSTANTS.DEFAULT_START_YEAR,
-  startQuarter: number = CASCADE_CONSTANTS.DEFAULT_START_QUARTER,
+  startYear?: number,
+  startQuarter?: number,
   forecastYears: number = CASCADE_CONSTANTS.DEFAULT_FORECAST_YEARS
 ): Promise<number> {
+  // Data-driven quarter range: start from earliest SQL history if not specified
+  let resolvedStartYear = startYear ?? CASCADE_CONSTANTS.DEFAULT_START_YEAR;
+  let resolvedStartQuarter = startQuarter ?? CASCADE_CONSTANTS.DEFAULT_START_QUARTER;
+
+  if (!startYear || !startQuarter) {
+    const history = await db.getSqlHistoryByCompany(companyId);
+    if (history.length > 0) {
+      const earliest = history.reduce((min, h) => {
+        const hVal = h.year * 4 + h.quarter;
+        const mVal = min.year * 4 + min.quarter;
+        return hVal < mVal ? { year: h.year, quarter: h.quarter } : min;
+      }, { year: history[0].year, quarter: history[0].quarter });
+      resolvedStartYear = earliest.year;
+      resolvedStartQuarter = earliest.quarter;
+    }
+  }
+
   const input: CascadeInput = {
     companyId,
-    startYear,
-    startQuarter,
+    startYear: resolvedStartYear,
+    startQuarter: resolvedStartQuarter,
     forecastYears,
   };
 

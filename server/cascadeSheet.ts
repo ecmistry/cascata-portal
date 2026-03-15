@@ -101,6 +101,10 @@ export async function calculateCascadeSheet(
   const allDealEcon = await db.getDealEconomicsByCompany(companyId);
   const allActuals = await db.getActualsByCompany(companyId);
 
+  // Load configurable defaults from sync config
+  const company = await db.getCompanyById(companyId);
+  const syncConfig = company ? db.parseSyncConfig(company) : null;
+
   const sqlType = sqlTypes.find(t => t.name === sqlTypeName);
   if (!sqlType) throw new Error(`SQL type "${sqlTypeName}" not found`);
 
@@ -112,12 +116,18 @@ export async function calculateCascadeSheet(
 
   // ── SQL timing probabilities ───────────────────────────────────────
   const timeDist = allTimeDist.find(td => td.sqlTypeId === sqlType.id);
+  const defaultSqlProbs = [
+    (syncConfig?.defaultSqlTimingSameQ ?? 8900) / 10000,
+    (syncConfig?.defaultSqlTimingNextQ ?? 1000) / 10000,
+    (syncConfig?.defaultSqlTimingTwoQ ?? 100) / 10000,
+  ];
   const sqlProbs = timeDist
     ? [timeDist.sameQuarterPct / 10000, timeDist.nextQuarterPct / 10000, timeDist.twoQuarterPct / 10000]
-    : [0.89, 0.10, 0.01];
+    : defaultSqlProbs;
 
   // ── Opp win timing probabilities ──────────────────────────────────
-  let oppProbs = DEFAULT_OPP_TIMING;
+  const defaultOppProbs = syncConfig?.defaultOppTiming ?? DEFAULT_OPP_TIMING;
+  let oppProbs = defaultOppProbs;
   if (timeDist?.oppTimingJson) {
     try {
       const parsed = JSON.parse(timeDist.oppTimingJson);
@@ -146,9 +156,10 @@ export async function calculateCascadeSheet(
     totalActualOpps += a.actualOpps ?? 0;
   }
 
+  const defaultConvRate = (syncConfig?.defaultConversionRate ?? 5000) / 10000;
   const overallConvRate = totalActualSqls > 0
     ? Math.min(totalActualOpps / totalActualSqls, 1.0)
-    : 0.50;
+    : defaultConvRate;
 
   // ── Win rates ─────────────────────────────────────────────────────
   const matchingConvRates = allConvRates.filter(
@@ -249,18 +260,22 @@ export async function calculateCascadeSheet(
   }
 
   // ── Build Opportunity cascade rows ────────────────────────────────
+  // Apply combined win rate: opps are now true opportunities (from contacts),
+  // so we multiply by win rate before distributing with opp timing.
+  const combinedWinRate = winNew + winUpsell;
   const oppRows: OppCascadeRow[] = [];
 
   for (let i = 0; i < quarterColumns.length; i++) {
     const qCol = quarterColumns[i];
     const opps = totalOppsPerQuarter[i];
+    const expectedWins = opps * (combinedWinRate > 0 ? combinedWinRate : 1);
 
     const cascadeValues = new Array(quarterColumns.length).fill(0);
 
     for (let p = 0; p < oppProbs.length; p++) {
       const targetIdx = i + p;
       if (targetIdx < quarterColumns.length) {
-        cascadeValues[targetIdx] = opps * oppProbs[p];
+        cascadeValues[targetIdx] = expectedWins * oppProbs[p];
       }
     }
 

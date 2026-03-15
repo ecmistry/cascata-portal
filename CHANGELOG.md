@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] - 2026-03-15
+
+### Added
+- **Configurable model defaults**: New "Model Defaults" section on the Configuration page for SQL timing distribution, opp win timing distribution, and default conversion rate — used as fallbacks when fewer than 5 data points exist for a motion
+- **True SQL→Opp conversion**: Opportunities are now counted from contacts with opp dates (not from closed-won deals), giving an accurate SQL→Opportunity conversion rate per quarter
+- **Win rate in opp cascade**: The combined win rate (new business + upsell) is now applied before the opp timing distribution, ensuring the right-panel cascade shows expected won deals rather than total opportunities
+- **Cascade engine alignment**: Engine now uses per-quarter conversion rates from actuals, opp win timing from `oppTimingJson`, and data-driven quarter range from SQL history (instead of fixed 2024 Q1 start)
+
+### Changed
+- **Conversion rate semantics**: `oppCoverageRatio` in `conversionRates` table is now true SQL→Opp (contacts with opp date / contacts with SQL date). `winRateNew` and `winRateUpsell` are now true win rates (won deals / total opportunities)
+- **Actuals table**: `actualOpps` is now populated from contacts with opp dates (keyed by SQL date quarter), separate from `actualRevenue` which remains keyed by deal close date quarter
+- **Cascade engine**: Rewrote core calculation to match cascade sheet logic — per-quarter conversion, full SQL + Opp timing cascade, win rate application, and per-motion ACV split
+- **Documentation**: Updated to reflect true conversion semantics, win rate in opp cascade, configurable defaults, and updated glossary
+
 ## [1.6.0] - 2026-03-14
 
 ### Added

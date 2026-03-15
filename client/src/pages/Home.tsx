@@ -226,7 +226,7 @@ export default function Home() {
                   {
                     step: "Extract",
                     color: "bg-blue-500",
-                    desc: "Fetches contacts at the SQL lifecycle stage and all deals from HubSpot's Search API. Uses configurable property names from the Configuration page.",
+                    desc: "Fetches contacts that have an SQL date (HAS_PROPERTY filter) and closed-won deals from HubSpot's Search API. Uses configurable property names from the Configuration page.",
                   },
                   {
                     step: "Load",
@@ -258,11 +258,11 @@ export default function Home() {
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      <span><strong>Actuals</strong> -- actual SQLs, opportunities, and revenue per quarter</span>
+                      <span><strong>Actuals</strong> -- actual SQLs (from contacts), opportunities (contacts with opp date), and revenue (closed-won deals) per quarter</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
-                      <span><strong>Conversion Rates</strong> -- SQL→Opp ratio and win rates (new/upsell)</span>
+                      <span><strong>Conversion Rates</strong> -- true SQL→Opp ratio (from contacts) and win rates (won deals / opportunities)</span>
                     </div>
                     <div className="flex items-start gap-2">
                       <CheckCircle2 className="h-4 w-4 text-green-500 mt-0.5 shrink-0" />
@@ -379,6 +379,37 @@ export default function Home() {
               <p className="text-muted-foreground text-sm mb-3">
                 See <a href="#deal-classification" className="text-blue-600 hover:underline">Section 6</a> for a detailed explanation.
               </p>
+
+              <h3 className="text-lg font-semibold mt-6 mb-3">Model Defaults (3 settings)</h3>
+              <div className="space-y-3 mb-6">
+                {[
+                  {
+                    q: "SQL Timing Distribution defaults",
+                    why: "When a motion has fewer than 5 contacts with both SQL and Opp dates, these fallback probabilities are used instead. Values are in basis points (8900 = 89%). The three values (same quarter, next quarter, +2 quarters) must sum to 10000.",
+                    example: "8900 / 1000 / 100",
+                  },
+                  {
+                    q: "Opp Win Timing Distribution defaults",
+                    why: "When a motion has fewer than 5 closed-won deals with create and close dates, these fallback probabilities are used. Enter comma-separated percentages for each quarter offset (e.g. 14%, 33%, 25%, 15%, 7%, 4%, 2%).",
+                    example: "14, 33, 25, 15, 7, 4, 2",
+                  },
+                  {
+                    q: "Default Conversion Rate",
+                    why: "When a quarter has no actual data to derive a SQL→Opp conversion rate, this fallback is used. Value in basis points (5000 = 50%). Override this based on your historical average.",
+                    example: "5000",
+                  },
+                ].map((item, i) => (
+                  <Card key={i}>
+                    <CardContent className="pt-4 pb-3">
+                      <p className="text-sm font-medium mb-1">{item.q}</p>
+                      <p className="text-xs text-muted-foreground mb-2">{item.why}</p>
+                      <div className="flex items-center gap-1.5">
+                        <Badge variant="secondary" className="text-xs font-mono">{item.example}</Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
 
             {/* 4. Cascade Engine */}
@@ -407,11 +438,13 @@ export default function Home() {
                   <CardContent className="pt-4">
                     <h4 className="font-semibold text-sm mb-2">Step 2: Determine Conversion Rates</h4>
                     <p className="text-xs text-muted-foreground">
-                      For each quarter, calculate the SQL→Opportunity conversion rate from actual data:
+                      For each quarter, calculate the true SQL→Opportunity conversion rate:
                       <code className="bg-muted px-1 py-0.5 rounded text-xs ml-1">
-                        conversion rate = actual opportunities / actual SQLs
+                        conversion rate = contacts with opp date / contacts with SQL date
                       </code>
-                      (capped at 100%). If a future quarter has no actuals yet, the overall historical average is used.
+                      (capped at 100%). Opportunities are counted from contacts that have an opportunity date, not from
+                      closed-won deals, giving a true SQL→Opp rate. If a future quarter has no actuals, the overall
+                      historical average is used, falling back to the configurable default (50% by default).
                     </p>
                   </CardContent>
                 </Card>
@@ -430,6 +463,7 @@ export default function Home() {
                     </div>
                     <p className="text-xs text-muted-foreground mt-2">
                       So 45 SQLs at 50% conversion = 22.5 expected opps, distributed as ~20 this quarter, ~2.25 next quarter, ~0.225 two quarters later.
+                      These percentages are derived from your data when enough samples exist (5+); otherwise configurable defaults from the settings page are used.
                     </p>
                   </CardContent>
                 </Card>
@@ -449,9 +483,9 @@ export default function Home() {
                   <CardContent className="pt-4">
                     <h4 className="font-semibold text-sm mb-2">Step 5: Opportunity Cascade (Opp &rarr; Deal Won)</h4>
                     <p className="text-xs text-muted-foreground mb-2">
-                      The "Total Opps Created" from each quarter column feeds into the second cascade. The opp win
-                      timing distribution (calculated from deal create date → close date) spreads these opportunities
-                      across future quarters to predict when deals will close:
+                      The "Total Opps Created" from each quarter column feeds into the second cascade. First, the
+                      combined win rate (new business + upsell) is applied to convert opportunities into expected wins.
+                      Then the opp win timing distribution spreads those expected wins across future quarters:
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       <Badge variant="outline" className="text-xs">Same Quarter: ~14%</Badge>
@@ -505,7 +539,7 @@ export default function Home() {
                     </div>
                     <div className="flex items-start gap-2">
                       <Badge variant="outline" className="shrink-0 mt-0.5 text-emerald-600 border-emerald-300">Right Panel</Badge>
-                      <span><strong>Opportunity &rarr; Deal Won Cascade</strong> -- Takes the "Total Opps Created" from the left panel and cascades them forward using the opp win timing distribution to predict when deals close.</span>
+                      <span><strong>Opportunity &rarr; Deal Won Cascade</strong> -- Takes the "Total Opps Created" from the left panel, applies the combined win rate, then cascades forward using the opp win timing distribution to predict when deals close.</span>
                     </div>
                   </div>
                 </CardContent>
@@ -660,7 +694,7 @@ export default function Home() {
                     </tr>
                     <tr className="border-b">
                       <td className="p-2.5 font-mono text-xs">conversionRates</td>
-                      <td className="p-2.5">SQL→Opp ratio, new/upsell win rates</td>
+                      <td className="p-2.5">True SQL→Opp ratio (from contacts), win rates = won deals / opportunities (new/upsell)</td>
                       <td className="p-2.5">Per SQL type, per region (aggregate)</td>
                     </tr>
                     <tr className="border-b">
@@ -757,14 +791,15 @@ export default function Home() {
                       ["Motion", "The channel or method that generated the SQL: Inbound (marketing-sourced), Outbound (BDR-generated), Event, Partner, Inbound Led Outbound (ILO)."],
                       ["Region / Pod", "The sales team, geographic territory, or pod that owns the SQL or deal."],
                       ["Cascade", "A quarter-by-quarter matrix showing how SQL cohorts flow forward through the pipeline over time."],
-                      ["Conversion Rate", "The percentage of SQLs that become opportunities. Calculated per quarter from actual HubSpot data."],
+                      ["Conversion Rate", "The percentage of SQLs that become opportunities. Calculated per quarter from contacts with opp dates divided by contacts with SQL dates. Uses configurable fallback when no data exists."],
                       ["SQL Timing", "The probability split of when converted SQLs become opportunities (same quarter, next quarter, or later). Shown in the left panel."],
                       ["Opp Win Timing", "The probability split of when opportunities close as won deals, spanning multiple quarters. Calculated from deal create date to close date. Shown in the right panel."],
-                      ["Win Rate", "The percentage of opportunities that close as won deals. Tracked separately for new business and upsell."],
+                      ["Win Rate", "The percentage of opportunities that close as won deals (won deals / contacts with opp date). Tracked separately for new business and upsell. Combined win rate is applied in the opp cascade before timing distribution."],
                       ["ACV", "Average Contract Value -- the mean deal value, calculated from closed-won deals. Separate values for new business and upsell."],
                       ["ELT Sync", "Extract-Load-Transform -- the process of pulling data from HubSpot, loading it into the database, and transforming it into the cascade model."],
                       ["Delta Sync", "An incremental sync that only processes records modified since the last sync, reducing API calls and processing time."],
                       ["Quarter Range Filter", "From/To quarter selectors on cascade sheets that let you narrow the displayed columns to a specific time period."],
+                      ["Model Defaults", "Configurable fallback values (SQL timing, opp timing, conversion rate) used when fewer than 5 data points exist for a motion. Set on the Configuration page."],
                       ["Closed-Won", "A deal stage indicating the customer has signed and the deal is complete. Revenue is recognised at this stage."],
                     ].map(([term, def]) => (
                       <tr key={term} className="border-b">

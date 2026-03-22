@@ -306,6 +306,71 @@ export type RScoreHistoryRow = typeof rScoreHistory.$inferSelect;
 export type InsertRScoreHistory = typeof rScoreHistory.$inferInsert;
 
 /**
+ * Revenue targets/quotas per region per quarter.
+ * Manually entered; used for attainment comparison.
+ */
+export const revenueTargets = mysqlTable("revenueTargets", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  regionId: int("regionId").notNull(),
+  year: int("year").notNull(),
+  quarter: int("quarter").notNull(),
+  targetNewBiz: int("targetNewBiz").notNull().default(0), // cents
+  targetUpsell: int("targetUpsell").notNull().default(0), // cents
+  targetTotal: int("targetTotal").notNull().default(0), // cents (may differ from sum for manual override)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  uniqueTarget: unique("rt_co_reg_yr_q_unique").on(table.companyId, table.regionId, table.year, table.quarter),
+}));
+
+export type RevenueTarget = typeof revenueTargets.$inferSelect;
+export type InsertRevenueTarget = typeof revenueTargets.$inferInsert;
+
+/**
+ * Churn and adjustments per region per quarter.
+ * Manually entered or derived from CRM data.
+ */
+export const churnData = mysqlTable("churnData", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  regionId: int("regionId").notNull(),
+  year: int("year").notNull(),
+  quarter: int("quarter").notNull(),
+  churnAmount: int("churnAmount").notNull().default(0), // cents (positive = lost revenue)
+  maaArr: int("maaArr").notNull().default(0), // cents (M&A ARR additions)
+  adjustment: int("adjustment").notNull().default(0), // cents (positive or negative manual adj)
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  uniqueChurn: unique("ch_co_reg_yr_q_unique").on(table.companyId, table.regionId, table.year, table.quarter),
+}));
+
+export type ChurnDataRow = typeof churnData.$inferSelect;
+export type InsertChurnData = typeof churnData.$inferInsert;
+
+/**
+ * Headcount per region per quarter for productivity tracking.
+ * AM = Account Manager, AE = Account Executive.
+ */
+export const headcount = mysqlTable("headcount", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  regionId: int("regionId").notNull(),
+  year: int("year").notNull(),
+  quarter: int("quarter").notNull(),
+  amCount: int("amCount").notNull().default(0),
+  aeCount: int("aeCount").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  uniqueHc: unique("hc_co_reg_yr_q_unique").on(table.companyId, table.regionId, table.year, table.quarter),
+}));
+
+export type HeadcountRow = typeof headcount.$inferSelect;
+export type InsertHeadcount = typeof headcount.$inferInsert;
+
+/**
  * Saved What-If scenarios for comparison and sharing
  */
 export const scenarios = mysqlTable("scenarios", {

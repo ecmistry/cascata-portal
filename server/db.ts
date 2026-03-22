@@ -15,6 +15,9 @@ import {
   dataQualityReports, InsertDataQualityReport, DataQualityReportRow,
   quarterlyMetrics, QuarterlyMetric, InsertQuarterlyMetric,
   rScoreHistory, RScoreHistoryRow, InsertRScoreHistory,
+  revenueTargets, RevenueTarget, InsertRevenueTarget,
+  churnData, ChurnDataRow, InsertChurnData,
+  headcount, HeadcountRow, InsertHeadcount,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { ERROR_MESSAGES } from '@shared/const';
@@ -1009,5 +1012,91 @@ export async function getRScoreHistoryByCompany(companyId: number) {
         .orderBy(desc(rScoreHistory.createdAt));
     },
     () => [] as RScoreHistoryRow[],
+  );
+}
+
+// ============================================================================
+// Revenue Targets Management
+// ============================================================================
+
+export async function upsertRevenueTarget(data: InsertRevenueTarget) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(revenueTargets).values(data).onDuplicateKeyUpdate({
+    set: {
+      targetNewBiz: data.targetNewBiz,
+      targetUpsell: data.targetUpsell,
+      targetTotal: data.targetTotal,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getRevenueTargetsByCompany(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select().from(revenueTargets).where(eq(revenueTargets.companyId, companyId));
+    },
+    () => [] as RevenueTarget[],
+  );
+}
+
+export async function deleteRevenueTarget(id: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  await db.delete(revenueTargets).where(eq(revenueTargets.id, id));
+}
+
+// ============================================================================
+// Churn Data Management
+// ============================================================================
+
+export async function upsertChurnData(data: InsertChurnData) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(churnData).values(data).onDuplicateKeyUpdate({
+    set: {
+      churnAmount: data.churnAmount,
+      maaArr: data.maaArr,
+      adjustment: data.adjustment,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getChurnDataByCompany(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select().from(churnData).where(eq(churnData.companyId, companyId));
+    },
+    () => [] as ChurnDataRow[],
+  );
+}
+
+// ============================================================================
+// Headcount Management
+// ============================================================================
+
+export async function upsertHeadcount(data: InsertHeadcount) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(headcount).values(data).onDuplicateKeyUpdate({
+    set: {
+      amCount: data.amCount,
+      aeCount: data.aeCount,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getHeadcountByCompany(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select().from(headcount).where(eq(headcount.companyId, companyId));
+    },
+    () => [] as HeadcountRow[],
   );
 }

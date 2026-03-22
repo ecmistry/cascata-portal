@@ -800,6 +800,143 @@ export const appRouter = router({
     }),
   }),
 
+  // Revenue Targets management
+  revenueTarget: router({
+    upsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        regionId: z.number(),
+        year: z.number().int().min(2000).max(2100),
+        quarter: z.number().int().min(1).max(4),
+        targetNewBiz: z.number().int().min(0),
+        targetUpsell: z.number().int().min(0),
+        targetTotal: z.number().int().min(0),
+      }))
+      .mutation(async ({ input }) => {
+        await db.upsertRevenueTarget(input);
+        return { success: true };
+      }),
+
+    bulkUpsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        targets: z.array(z.object({
+          regionId: z.number(),
+          year: z.number().int().min(2000).max(2100),
+          quarter: z.number().int().min(1).max(4),
+          targetNewBiz: z.number().int().min(0),
+          targetUpsell: z.number().int().min(0),
+          targetTotal: z.number().int().min(0),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        for (const t of input.targets) {
+          await db.upsertRevenueTarget({ companyId: input.companyId, ...t });
+        }
+        return { success: true, count: input.targets.length };
+      }),
+
+    list: companyProtectedProcedure
+      .input(z.object({ companyId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getRevenueTargetsByCompany(input.companyId);
+      }),
+  }),
+
+  // Churn Data management
+  churnData: router({
+    upsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        regionId: z.number(),
+        year: z.number().int().min(2000).max(2100),
+        quarter: z.number().int().min(1).max(4),
+        churnAmount: z.number().int().min(0),
+        maaArr: z.number().int().min(0).default(0),
+        adjustment: z.number().int().default(0),
+      }))
+      .mutation(async ({ input }) => {
+        await db.upsertChurnData(input);
+        return { success: true };
+      }),
+
+    bulkUpsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        entries: z.array(z.object({
+          regionId: z.number(),
+          year: z.number().int().min(2000).max(2100),
+          quarter: z.number().int().min(1).max(4),
+          churnAmount: z.number().int().min(0),
+          maaArr: z.number().int().min(0).default(0),
+          adjustment: z.number().int().default(0),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        for (const e of input.entries) {
+          await db.upsertChurnData({ companyId: input.companyId, ...e });
+        }
+        return { success: true, count: input.entries.length };
+      }),
+
+    list: companyProtectedProcedure
+      .input(z.object({ companyId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getChurnDataByCompany(input.companyId);
+      }),
+  }),
+
+  // Headcount management
+  headcount: router({
+    upsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        regionId: z.number(),
+        year: z.number().int().min(2000).max(2100),
+        quarter: z.number().int().min(1).max(4),
+        amCount: z.number().int().min(0),
+        aeCount: z.number().int().min(0),
+      }))
+      .mutation(async ({ input }) => {
+        await db.upsertHeadcount(input);
+        return { success: true };
+      }),
+
+    bulkUpsert: companyProtectedProcedure
+      .input(z.object({
+        companyId: z.number(),
+        entries: z.array(z.object({
+          regionId: z.number(),
+          year: z.number().int().min(2000).max(2100),
+          quarter: z.number().int().min(1).max(4),
+          amCount: z.number().int().min(0),
+          aeCount: z.number().int().min(0),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        for (const e of input.entries) {
+          await db.upsertHeadcount({ companyId: input.companyId, ...e });
+        }
+        return { success: true, count: input.entries.length };
+      }),
+
+    list: companyProtectedProcedure
+      .input(z.object({ companyId: z.number() }))
+      .query(async ({ input }) => {
+        return await db.getHeadcountByCompany(input.companyId);
+      }),
+  }),
+
+  // CARR (Contracted ARR) summary
+  carr: router({
+    summary: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const { computeCarrSummary } = await import("./carrEngine");
+        return await computeCarrSummary(input.companyId);
+      }),
+  }),
+
   cascade: router({
     getSyncConfig: protectedProcedure
       .input(z.object({ companyId: z.number().int().min(1) }))

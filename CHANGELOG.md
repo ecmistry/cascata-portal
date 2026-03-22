@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-03-11
+
+### Added
+- **Revenue Targets / Quotas**: New `revenueTargets` table and UI for setting per-region, per-quarter targets with New Biz and Upsell breakdown. Targets drive attainment RAG on the Dashboard
+- **Churn & Adjustments tracking**: New `churnData` table with per-region, per-quarter fields for churn amount, M&A ARR, and manual adjustments — feeds the CARR waterfall
+- **Headcount tracking**: New `headcount` table with AM and AE count per region/quarter, enabling bookings-per-head productivity metrics
+- **CARR Engine**: New `server/carrEngine.ts` computes Closing CARR = Opening + Bookings - Churn + M&A + Adjustments as a rolling waterfall across quarters
+- **Revenue Planning page**: Dedicated `/revenue-planning` page with tabbed interface for Targets/Quotas, Churn & Adjustments, and Headcount entry — all editable per region and quarter
+- **Dashboard CARR waterfall**: Interactive table showing Opening CARR → Bookings → Churn → M&A → Adjustments → Closing CARR per quarter with colour-coded rows
+- **Dashboard attainment cards**: Quota Attainment, Total Bookings, and Bookings/Head cards with RAG-coloured attainment percentages
+- **Cascade Sheet revenue summary**: Revenue Summary strip below cascade panels showing New Bookings, Upsell Bookings, Churn, Closing CARR, and Attainment per quarter
+- **Sidebar navigation**: Revenue Planning link added between Configure and Cascade Sheets sections
+- **tRPC routes**: New `revenueTarget.*`, `churnData.*`, `headcount.*`, and `carr.summary` procedures with bulk upsert support
+
+### Changed
+- **Database schema**: Three new tables (`revenueTargets`, `churnData`, `headcount`) via migration `0010_phase3_targets_churn_headcount.sql`
+- **Dashboard layout**: CARR waterfall section inserted between hierarchical cascade and classic analytics
+- **Sidebar**: Added TrendingUp icon import and Revenue Planning menu item
+
 ## [2.1.0] - 2026-03-11
 
 ### Added

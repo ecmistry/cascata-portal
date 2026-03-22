@@ -549,7 +549,89 @@ export default function CascadeSheet() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Revenue Summary Strip */}
+        <CascadeRevenueSummary companyId={companyId} quarters={filteredQuarters} />
       </div>
     </DashboardLayout>
+  );
+}
+
+function CascadeRevenueSummary({ companyId, quarters }: { companyId: number; quarters: QLabel[] }) {
+  const { data: carrData } = trpc.carr.summary.useQuery(
+    { companyId },
+    { enabled: companyId > 0 },
+  );
+
+  if (!carrData || carrData.global.length === 0 || quarters.length === 0) return null;
+
+  const qKeySet = new Set(quarters.map(q => `${q.year}-${q.quarter}`));
+  const filteredGlobal = carrData.global.filter(g => qKeySet.has(`${g.year}-${g.quarter}`));
+  if (filteredGlobal.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
+          Revenue Summary
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-[10px] border-collapse">
+            <thead>
+              <tr className="border-b bg-muted/40">
+                <th className="text-left p-1.5 w-32 sticky left-0 bg-muted/40 z-10">Metric</th>
+                {filteredGlobal.map(q => (
+                  <th key={q.label} className="text-right p-1.5 min-w-[80px] border-l">{q.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr className="border-b bg-blue-50/30">
+                <td className="p-1.5 text-blue-700 font-medium sticky left-0 bg-blue-50/30 z-10">New Bookings</td>
+                {filteredGlobal.map((q, i) => (
+                  <td key={i} className="p-1.5 text-right text-blue-700 border-l">{currFmt(q.newBookings / 100)}</td>
+                ))}
+              </tr>
+              <tr className="border-b bg-violet-50/30">
+                <td className="p-1.5 text-violet-700 font-medium sticky left-0 bg-violet-50/30 z-10">Upsell Bookings</td>
+                {filteredGlobal.map((q, i) => (
+                  <td key={i} className="p-1.5 text-right text-violet-700 border-l">{currFmt(q.upsellBookings / 100)}</td>
+                ))}
+              </tr>
+              <tr className="border-b bg-red-50/30">
+                <td className="p-1.5 text-red-700 font-medium sticky left-0 bg-red-50/30 z-10">Churn</td>
+                {filteredGlobal.map((q, i) => (
+                  <td key={i} className="p-1.5 text-right text-red-700 border-l">{q.churn > 0 ? `-${currFmt(q.churn / 100)}` : "$0"}</td>
+                ))}
+              </tr>
+              <tr className="border-b-2 border-t bg-muted/30 font-bold">
+                <td className="p-1.5 sticky left-0 bg-muted/30 z-10">Closing CARR</td>
+                {filteredGlobal.map((q, i) => (
+                  <td key={i} className="p-1.5 text-right border-l">{currFmt(q.closingCarr / 100)}</td>
+                ))}
+              </tr>
+              {filteredGlobal.some(q => q.targetTotal > 0) && (
+                <tr className="border-b">
+                  <td className="p-1.5 text-purple-700 font-medium sticky left-0 bg-white z-10">Attainment</td>
+                  {filteredGlobal.map((q, i) => {
+                    const bookings = q.newBookings + q.upsellBookings;
+                    const att = q.targetTotal > 0 ? Math.round((bookings / q.targetTotal) * 100) : 0;
+                    const color = att >= 90 ? "text-emerald-700" : att >= 70 ? "text-amber-700" : att > 0 ? "text-red-700" : "text-muted-foreground";
+                    return (
+                      <td key={i} className={`p-1.5 text-right border-l font-semibold ${color}`}>
+                        {q.targetTotal > 0 ? `${att}%` : "—"}
+                      </td>
+                    );
+                  })}
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

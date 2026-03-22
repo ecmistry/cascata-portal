@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Target, Zap, BarChart3, Filter, Home, ChevronDown, ChevronRight, Activity } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Target, Zap, BarChart3, Filter, Home, ChevronDown, ChevronRight, Activity, Users } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -117,6 +117,224 @@ function RagSummaryCard({ data }: { data: any }) {
         )}
       </CardContent>
     </Card>
+  );
+}
+
+function CarrSummarySection({ companyId }: { companyId: number }) {
+  const { data: carrData, isLoading } = trpc.carr.summary.useQuery(
+    { companyId },
+    { enabled: companyId > 0 },
+  );
+
+  if (isLoading) {
+    return (
+      <Card className="mb-4">
+        <CardContent className="py-6 flex justify-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (!carrData || carrData.quarters.length === 0 || carrData.global.length === 0) {
+    return null;
+  }
+
+  const fmtD = (cents: number) => {
+    const d = cents / 100;
+    if (Math.abs(d) >= 1_000_000) return `$${(d / 1_000_000).toFixed(1)}M`;
+    if (Math.abs(d) >= 1_000) return `$${(d / 1_000).toFixed(0)}K`;
+    return `$${d.toFixed(0)}`;
+  };
+
+  const latestGlobal = carrData.global[carrData.global.length - 1];
+  const totalBookings = carrData.global.reduce((s, q) => s + q.newBookings + q.upsellBookings, 0);
+  const totalTarget = carrData.global.reduce((s, q) => s + q.targetTotal, 0);
+  const globalAttainment = totalTarget > 0 ? Math.round((totalBookings / totalTarget) * 100) : 0;
+  const totalHc = carrData.global.reduce((s, q) => s + q.amCount + q.aeCount, 0);
+  const avgHcPerQ = carrData.quarters.length > 0 ? totalHc / carrData.quarters.length : 0;
+  const avgBookingsPerHead = avgHcPerQ > 0 ? Math.round(totalBookings / avgHcPerQ) : 0;
+
+  const hasTargets = totalTarget > 0;
+  const hasHeadcount = totalHc > 0;
+
+  if (!hasTargets && !hasHeadcount && latestGlobal.closingCarr === 0) {
+    return null;
+  }
+
+  return (
+    <div className="space-y-4 mb-4">
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className="border-2 border-emerald-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground mb-1">Closing CARR</p>
+            <div className="text-2xl font-bold text-emerald-700">
+              {latestGlobal.closingCarr > 0 ? fmtD(latestGlobal.closingCarr) : "N/A"}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {latestGlobal.label} projected
+            </p>
+          </CardContent>
+        </Card>
+
+        {hasTargets && (
+          <Card className={`border-2 ${globalAttainment >= 90 ? "border-emerald-200" : globalAttainment >= 70 ? "border-amber-200" : "border-red-200"}`}>
+            <CardContent className="pt-4 pb-3 px-4">
+              <p className="text-xs text-muted-foreground mb-1">Quota Attainment</p>
+              <div className={`text-2xl font-bold ${globalAttainment >= 90 ? "text-emerald-700" : globalAttainment >= 70 ? "text-amber-700" : "text-red-700"}`}>
+                {globalAttainment}%
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                {fmtD(totalBookings)} of {fmtD(totalTarget)} target
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card className="border-2 border-blue-200">
+          <CardContent className="pt-4 pb-3 px-4">
+            <p className="text-xs text-muted-foreground mb-1">Total Bookings</p>
+            <div className="text-2xl font-bold text-blue-700">
+              {fmtD(totalBookings)}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              {fmtD(carrData.global.reduce((s, q) => s + q.newBookings, 0))} new + {fmtD(carrData.global.reduce((s, q) => s + q.upsellBookings, 0))} upsell
+            </p>
+          </CardContent>
+        </Card>
+
+        {hasHeadcount && (
+          <Card className="border-2 border-indigo-200">
+            <CardContent className="pt-4 pb-3 px-4">
+              <p className="text-xs text-muted-foreground mb-1">Bookings / Head</p>
+              <div className="text-2xl font-bold text-indigo-700">
+                {fmtD(avgBookingsPerHead)}
+              </div>
+              <p className="text-[10px] text-muted-foreground mt-0.5">
+                Avg {Math.round(avgHcPerQ)} heads/quarter
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* CARR Waterfall by Quarter */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2">
+            <DollarSign className="h-4 w-4" />
+            CARR Waterfall
+          </CardTitle>
+          <CardDescription className="text-sm">
+            Opening + Bookings - Churn + M&A + Adjustments = Closing CARR
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs border-collapse">
+              <thead>
+                <tr className="border-b bg-muted/40">
+                  <th className="text-left p-2 w-36 sticky left-0 bg-muted/40 z-10">Metric</th>
+                  {carrData.quarters.map(q => (
+                    <th key={q.label} className="text-right p-2 min-w-[90px] border-l">{q.label}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                <tr className="border-b">
+                  <td className="p-2 font-medium sticky left-0 bg-white z-10">Opening CARR</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right border-l">{fmtD(q.openingCarr)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b bg-blue-50/40">
+                  <td className="p-2 text-blue-700 sticky left-0 bg-blue-50/40 z-10">+ New Bookings</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right text-blue-700 border-l">{fmtD(q.newBookings)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b bg-violet-50/40">
+                  <td className="p-2 text-violet-700 sticky left-0 bg-violet-50/40 z-10">+ Upsell Bookings</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right text-violet-700 border-l">{fmtD(q.upsellBookings)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b bg-red-50/40">
+                  <td className="p-2 text-red-700 sticky left-0 bg-red-50/40 z-10">- Churn</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right text-red-700 border-l">{q.churn > 0 ? `-${fmtD(q.churn)}` : "$0"}</td>
+                  ))}
+                </tr>
+                <tr className="border-b bg-green-50/40">
+                  <td className="p-2 text-green-700 sticky left-0 bg-green-50/40 z-10">+ M&A ARR</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right text-green-700 border-l">{fmtD(q.maaArr)}</td>
+                  ))}
+                </tr>
+                <tr className="border-b bg-amber-50/40">
+                  <td className="p-2 text-amber-700 sticky left-0 bg-amber-50/40 z-10">+/- Adjustments</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right text-amber-700 border-l">
+                      {q.adjustment !== 0 ? (q.adjustment > 0 ? `+${fmtD(q.adjustment)}` : `-${fmtD(Math.abs(q.adjustment))}`) : "$0"}
+                    </td>
+                  ))}
+                </tr>
+                <tr className="border-b-2 border-t bg-muted/30 font-bold">
+                  <td className="p-2 sticky left-0 bg-muted/30 z-10">Closing CARR</td>
+                  {carrData.global.map((q, i) => (
+                    <td key={i} className="p-2 text-right border-l">{fmtD(q.closingCarr)}</td>
+                  ))}
+                </tr>
+                {hasTargets && (
+                  <>
+                    <tr className="border-b bg-purple-50/30">
+                      <td className="p-2 text-purple-700 sticky left-0 bg-purple-50/30 z-10">Target (Quota)</td>
+                      {carrData.global.map((q, i) => (
+                        <td key={i} className="p-2 text-right text-purple-700 border-l">{q.targetTotal > 0 ? fmtD(q.targetTotal) : "—"}</td>
+                      ))}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2 sticky left-0 bg-white z-10">Attainment</td>
+                      {carrData.global.map((q, i) => {
+                        const bookings = q.newBookings + q.upsellBookings;
+                        const att = q.targetTotal > 0 ? Math.round((bookings / q.targetTotal) * 100) : 0;
+                        const color = att >= 90 ? "text-emerald-700" : att >= 70 ? "text-amber-700" : att > 0 ? "text-red-700" : "text-muted-foreground";
+                        return (
+                          <td key={i} className={`p-2 text-right border-l font-semibold ${color}`}>
+                            {q.targetTotal > 0 ? `${att}%` : "—"}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </>
+                )}
+                {hasHeadcount && (
+                  <>
+                    <tr className="border-b bg-indigo-50/30">
+                      <td className="p-2 text-indigo-700 sticky left-0 bg-indigo-50/30 z-10">Headcount (AM+AE)</td>
+                      {carrData.global.map((q, i) => (
+                        <td key={i} className="p-2 text-right text-indigo-700 border-l">
+                          {(q.amCount + q.aeCount) > 0 ? `${q.amCount + q.aeCount}` : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                    <tr className="border-b">
+                      <td className="p-2 sticky left-0 bg-white z-10">Bookings / Head</td>
+                      {carrData.global.map((q, i) => (
+                        <td key={i} className="p-2 text-right border-l">
+                          {q.bookingsPerHead > 0 ? fmtD(q.bookingsPerHead) : "—"}
+                        </td>
+                      ))}
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
   );
 }
 
@@ -313,6 +531,9 @@ export default function Dashboard() {
                   )}
                 </CardContent>
               </Card>
+
+              {/* CARR / Attainment / Productivity Summary */}
+              <CarrSummarySection companyId={companyId} />
 
               {/* Collapsible Legacy Analytics */}
               <Card className="mb-4 border border-border">

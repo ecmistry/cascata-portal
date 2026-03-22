@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen, ShieldCheck } from "lucide-react";
+import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen, ShieldCheck, TrendingUp } from "lucide-react";
 import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -251,6 +251,27 @@ function DashboardLayoutContent({
                       className={`h-4 w-4 ${location === "/configure-cascata" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
                     />
                     <span className={location === "/configure-cascata" ? "font-medium" : ""}>Configure Cascata Environment</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              </SidebarMenu>
+            </div>
+
+            {/* Revenue Planning */}
+            <div className="px-2 py-2 border-b border-sidebar-border">
+              <SidebarMenu className="gap-0">
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/revenue-planning"}
+                    onClick={() => setLocation("/revenue-planning")}
+                    tooltip="Revenue Planning"
+                    className={`h-9 transition-all font-normal text-sm w-full justify-start gap-2 ${
+                      location === "/revenue-planning" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                    }`}
+                  >
+                    <TrendingUp
+                      className={`h-4 w-4 ${location === "/revenue-planning" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                    />
+                    <span className={location === "/revenue-planning" ? "font-medium" : ""}>Revenue Planning</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>

@@ -290,14 +290,18 @@ export default function CascataTest() {
   const contactColumns = useMemo(() => {
     if (!contactsData?.data?.length) return [];
     const cols = new Set<string>();
-    contactsData.data.forEach(row => Object.keys(row).forEach(k => cols.add(k)));
+    contactsData.data.forEach(row => Object.keys(row).forEach(k => {
+      cols.add(k.startsWith("property_") ? k.slice(9) : k);
+    }));
     return Array.from(cols).sort();
   }, [contactsData]);
 
   const dealColumns = useMemo(() => {
     if (!dealsData?.data?.length) return [];
     const cols = new Set<string>();
-    dealsData.data.forEach(row => Object.keys(row).forEach(k => cols.add(k)));
+    dealsData.data.forEach(row => Object.keys(row).forEach(k => {
+      cols.add(k.startsWith("property_") ? k.slice(9) : k);
+    }));
     return Array.from(cols).sort();
   }, [dealsData]);
 

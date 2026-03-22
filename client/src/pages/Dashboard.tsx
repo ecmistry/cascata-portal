@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { getLoginUrl } from "@/const";
 import { useLocation } from "wouter";
-import { Plus, TrendingUp, TrendingDown, DollarSign, Target, Zap, BarChart3, Filter, Home, ChevronDown, ChevronRight, Activity, Users } from "lucide-react";
+import { Plus, TrendingUp, TrendingDown, DollarSign, Target, Zap, BarChart3, Filter, Home, ChevronDown, ChevronRight, Activity, Users, Database, Shield } from "lucide-react";
 import { useMemo, useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
@@ -115,6 +115,109 @@ function RagSummaryCard({ data }: { data: any }) {
             {latestQ.ocr?.actual != null && ` | Opps: ${latestQ.ocr.actual} vs ${Math.round(latestQ.ocr.model)}`}
           </p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function DataCoverageCard({ companyId }: { companyId: number }) {
+  const { data } = trpc.dashboard.dataCoverage.useQuery(
+    { companyId },
+    { enabled: companyId > 0 },
+  );
+
+  if (!data) return (
+    <Card>
+      <CardContent className="pt-4 pb-3 px-4">
+        <p className="text-xs text-muted-foreground mb-1">Data Coverage</p>
+        <div className="text-2xl font-bold text-slate-400">N/A</div>
+        <p className="text-[10px] text-muted-foreground mt-0.5">No sync data</p>
+      </CardContent>
+    </Card>
+  );
+
+  const contactPct = data.contactsCoveragePct;
+  const dealPct = data.dealsCoveragePct;
+  const avgPct = (contactPct + dealPct) / 2;
+  const isGood = avgPct >= 70;
+  const isFair = avgPct >= 50;
+  const borderColor = isGood ? "border-emerald-300" : isFair ? "border-amber-300" : "border-red-300";
+  const textColor = isGood ? "text-emerald-700" : isFair ? "text-amber-700" : "text-red-700";
+
+  return (
+    <Card className={`border-2 ${borderColor}`}>
+      <CardContent className="pt-4 pb-3 px-4">
+        <p className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+          <Database className="h-3 w-3" /> Data Coverage
+        </p>
+        <div className={`text-2xl font-bold ${textColor}`}>{avgPct.toFixed(0)}%</div>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          Contacts: {contactPct.toFixed(0)}% ({data.contactsUsed}/{data.contactsFetched})
+        </p>
+        <p className="text-[10px] text-muted-foreground">
+          Deals: {dealPct.toFixed(0)}% ({data.dealsUsed}/{data.dealsFetched})
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RScoreTrendCard({ companyId, currentScore }: { companyId: number; currentScore: number | undefined }) {
+  const { data: history } = trpc.dashboard.rScoreHistory.useQuery(
+    { companyId },
+    { enabled: companyId > 0 },
+  );
+
+  const isValid = currentScore != null && isFinite(currentScore);
+  const pct = isValid ? Math.round(currentScore * 100) : 0;
+  const isGood = isValid && currentScore >= 0.7;
+  const isFair = isValid && currentScore >= 0.4;
+  const borderColor = !isValid ? "border-slate-200" :
+    isGood ? "border-emerald-300" : isFair ? "border-amber-300" : "border-red-300";
+  const textColor = !isValid ? "text-slate-400" :
+    isGood ? "text-emerald-700" : isFair ? "text-amber-700" : "text-red-700";
+
+  const hasHistory = history && history.length > 1;
+  const trend = hasHistory
+    ? history[history.length - 1].rScore - history[history.length - 2].rScore
+    : 0;
+
+  return (
+    <Card className={`border-2 ${borderColor}`}>
+      <CardContent className="pt-4 pb-3 px-4">
+        <p className="text-xs text-muted-foreground mb-1">Model Accuracy (R-Score)</p>
+        <div className="flex items-center gap-2">
+          <span className={`text-2xl font-bold ${textColor}`}>
+            {isValid ? `${pct}%` : "N/A"}
+          </span>
+          {hasHistory && trend !== 0 && (
+            <span className={`text-xs flex items-center gap-0.5 ${trend > 0 ? "text-emerald-600" : "text-red-600"}`}>
+              {trend > 0 ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
+              {Math.abs(Math.round(trend * 100))}pp
+            </span>
+          )}
+        </div>
+        {hasHistory && (
+          <div className="flex items-end gap-0.5 mt-1 h-4">
+            {history.map((h, i) => {
+              const val = Math.max(0, Math.min(100, Math.round(h.rScore * 100)));
+              const maxVal = Math.max(...history.map(x => Math.round(x.rScore * 100)), 1);
+              const heightPct = Math.max(10, (val / maxVal) * 100);
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-sm ${val >= 70 ? "bg-emerald-400" : val >= 40 ? "bg-amber-400" : "bg-red-400"}`}
+                  style={{ height: `${heightPct}%` }}
+                  title={`${h.label}: ${val}%`}
+                />
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {!isValid ? "Insufficient data" : isGood ? "Strong correlation" : isFair ? "Moderate" : "Weak"}
+          {hasHistory && ` · ${history.length}Q trend`}
+        </p>
       </CardContent>
     </Card>
   );
@@ -494,13 +597,14 @@ export default function Dashboard() {
 
           {companies.length > 0 && (
             <>
-              {/* R-Score + RAG + Upsell Headline Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
-                <RScoreCard score={rScores?.global?.overall} label="Overall R-Score" />
+              {/* Headline Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-6 gap-3 mb-4">
+                <RScoreTrendCard companyId={companyId} currentScore={rScores?.global?.overall} />
                 <RScoreCard score={rScores?.global?.ocr} label="Opp Coverage R" />
-                <RScoreCard score={rScores?.global?.owr} label="Opp Win Rate R" />
+                <RScoreCard score={rScores?.global?.owr} label="Win Rate R" />
                 <RagSummaryCard data={hierarchicalData} />
                 <UpsellSummaryCard data={hierarchicalData} />
+                <DataCoverageCard companyId={companyId} />
               </div>
 
               {/* Hierarchical Cascade View (primary) */}

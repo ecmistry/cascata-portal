@@ -1105,6 +1105,42 @@ export async function syncFromHubSpot(
     console.error("[HubSpot Sync] Forecast calculation failed:", msg);
   }
 
+  // ── Persist R-score history ──────────────────────────────────────────
+
+  try {
+    const { computeRScores } = await import("./pearsonEngine");
+    const rScores = await computeRScores(companyId);
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curQ = Math.ceil((now.getMonth() + 1) / 3);
+
+    const rScoreEntries: Array<{ metricType: "ocr" | "owr" | "overall"; regionId: number | null; rScore: number; sampleSize: number }> = [];
+    for (const entry of rScores.perRegion) {
+      if (isFinite(entry.rScore)) {
+        rScoreEntries.push({ metricType: entry.metricType, regionId: entry.regionId, rScore: entry.rScore, sampleSize: entry.sampleSize });
+      }
+    }
+    if (isFinite(rScores.global.ocr)) rScoreEntries.push({ metricType: "ocr", regionId: null, rScore: rScores.global.ocr, sampleSize: 0 });
+    if (isFinite(rScores.global.owr)) rScoreEntries.push({ metricType: "owr", regionId: null, rScore: rScores.global.owr, sampleSize: 0 });
+    if (isFinite(rScores.global.overall)) rScoreEntries.push({ metricType: "overall", regionId: null, rScore: rScores.global.overall, sampleSize: 0 });
+
+    for (const entry of rScoreEntries) {
+      await db.upsertRScoreHistory({
+        companyId,
+        metricType: entry.metricType,
+        regionId: entry.regionId,
+        year: curYear,
+        quarter: curQ,
+        rScore: entry.rScore.toFixed(4),
+        sampleSize: entry.sampleSize,
+      });
+    }
+    console.log(`[HubSpot Sync] Persisted ${rScoreEntries.length} R-score history records`);
+  } catch (err) {
+    stats.errors.push(`R-score history persist: ${err instanceof Error ? err.message : err}`);
+    console.error("[HubSpot Sync] R-score history persist failed:", err instanceof Error ? err.message : err);
+  }
+
   // ── Persist data quality report ─────────────────────────────────────
 
   try {

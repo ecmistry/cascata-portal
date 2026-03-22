@@ -599,6 +599,41 @@ export const appRouter = router({
         return await computeRScores(input.companyId);
       }),
 
+    rScoreHistory: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const rows = await db.getRScoreHistoryByCompany(input.companyId);
+        return rows
+          .filter(r => r.regionId === null && r.metricType === "overall")
+          .map(r => ({
+            year: r.year,
+            quarter: r.quarter,
+            rScore: parseFloat(r.rScore as any),
+            label: `Q${r.quarter} ${r.year}`,
+          }))
+          .sort((a, b) => a.year * 4 + a.quarter - (b.year * 4 + b.quarter));
+      }),
+
+    dataCoverage: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const latest = await db.getLatestDataQualityReport(input.companyId);
+        if (!latest) return null;
+        let report: any = null;
+        try { report = JSON.parse(latest.reportJson ?? "{}"); } catch { /* ignore */ }
+        return {
+          contactsFetched: latest.contactsFetched,
+          contactsUsed: latest.contactsUsed,
+          contactsCoveragePct: latest.coveragePct / 100,
+          dealsFetched: latest.dealsFetched ?? 0,
+          dealsUsed: latest.dealsUsed ?? 0,
+          dealsCoveragePct: (latest.dealsFetched ?? 0) > 0 ? Math.round(((latest.dealsUsed ?? 0) / (latest.dealsFetched ?? 0)) * 10000) / 100 : 0,
+          syncTimestamp: latest.syncTimestamp,
+          unmappedRegions: report?.unmappedRegionValues ?? {},
+          unmappedSqlTypes: report?.unmappedSqlTypeValues ?? {},
+        };
+      }),
+
     hierarchicalData: protectedProcedure
       .input(z.object({ companyId: z.number().int().min(1) }))
       .query(async ({ input }) => {

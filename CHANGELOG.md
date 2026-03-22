@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-03-11
+
+### Added
+- **R-Score History Persistence**: R-scores are now computed and saved to `rScoreHistory` table after every sync, enabling trend tracking over time
+- **R-Score Trend Card**: Dashboard headline card "Model Accuracy (R-Score)" now shows a sparkline bar chart of historical R-score values with quarter-over-quarter trend indicator (pp change)
+- **Data Coverage Card**: New dashboard headline card showing the percentage of HubSpot contacts and deals that pass data quality checks (region/sqlType mapping), sourced from the latest sync's data quality report
+- **tRPC routes**: `dashboard.rScoreHistory` returns global overall R-score trend; `dashboard.dataCoverage` returns latest sync quality metrics
+
+### Changed
+- Dashboard headline grid expanded from 5 to 6 cards: Model Accuracy (with trend), Opp Coverage R, Win Rate R, RAG Attainment, Upsell Forecast, Data Coverage
+
 ## [2.3.1] - 2026-03-11
 
 ### Added

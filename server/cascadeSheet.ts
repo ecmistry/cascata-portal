@@ -33,6 +33,9 @@ interface CascadeRow {
   conversionRate: number;
   cascadeValues: number[];
   totalOpps: number;
+  actualSqls: number | null;
+  actualOpps: number | null;
+  isHistorical: boolean;
 }
 
 interface OppCascadeRow {
@@ -40,6 +43,8 @@ interface OppCascadeRow {
   opps: number;
   cascadeValues: number[];
   totalWon: number;
+  actualWins: number | null;
+  isHistorical: boolean;
 }
 
 export interface CascadeSheetData {
@@ -211,12 +216,29 @@ export async function calculateCascadeSheet(
 
   const quarterColumns = buildQuarterRange(minYear, minQ, projectionEndYear, projectionEndQ);
 
+  // ── Current quarter boundary (historical vs forecast) ──────────────
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
+
+  // Build per-quarter actuals lookup including wins
+  const quarterActualsWithWins = new Map<string, { sqls: number; opps: number; wins: number }>();
+  for (const a of relevantActuals) {
+    const key = qKey(a.year, a.quarter);
+    const prev = quarterActualsWithWins.get(key) || { sqls: 0, opps: 0, wins: 0 };
+    prev.sqls += a.actualSqls ?? 0;
+    prev.opps += a.actualOpps ?? 0;
+    prev.wins += a.actualWins ?? 0;
+    quarterActualsWithWins.set(key, prev);
+  }
+
   // ── Build SQL cascade rows ────────────────────────────────────────
   const rows: CascadeRow[] = [];
 
   for (const qCol of quarterColumns) {
     const key = qKey(qCol.year, qCol.quarter);
     const sqls = volumeMap.get(key) || 0;
+    const isHist = qCol.year < currentYear || (qCol.year === currentYear && qCol.quarter < currentQuarter);
 
     const actualData = quarterActuals.get(key);
     let conv: number;
@@ -241,6 +263,7 @@ export async function calculateCascadeSheet(
     }
 
     const totalOpps = cascadeValues.reduce((s, v) => s + v, 0);
+    const qActual = quarterActualsWithWins.get(key);
 
     rows.push({
       quarter: qCol,
@@ -248,6 +271,9 @@ export async function calculateCascadeSheet(
       conversionRate: conv,
       cascadeValues,
       totalOpps,
+      actualSqls: isHist ? (qActual?.sqls ?? null) : null,
+      actualOpps: isHist ? (qActual?.opps ?? null) : null,
+      isHistorical: isHist,
     });
   }
 
@@ -269,6 +295,7 @@ export async function calculateCascadeSheet(
     const qCol = quarterColumns[i];
     const opps = totalOppsPerQuarter[i];
     const expectedWins = opps * (combinedWinRate > 0 ? combinedWinRate : 1);
+    const isHist = qCol.year < currentYear || (qCol.year === currentYear && qCol.quarter < currentQuarter);
 
     const cascadeValues = new Array(quarterColumns.length).fill(0);
 
@@ -280,12 +307,15 @@ export async function calculateCascadeSheet(
     }
 
     const totalWon = cascadeValues.reduce((s, v) => s + v, 0);
+    const qActual = quarterActualsWithWins.get(qKey(qCol.year, qCol.quarter));
 
     oppRows.push({
       quarter: qCol,
       opps,
       cascadeValues,
       totalWon,
+      actualWins: isHist ? (qActual?.wins ?? null) : null,
+      isHistorical: isHist,
     });
   }
 

@@ -541,24 +541,113 @@ export async function syncFromHubSpot(
     actualRevenues.set(key, existing);
   }
 
-  // Build unified actuals from contacts (SQLs + Opps by SQL date) and deals (revenue by close date)
-  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number }>();
+  // Build per-quarter deal metrics for quarterlyMetrics and actualWins
+  const qMetrics = new Map<string, {
+    closedWon: number;
+    closedLost: number;
+    wonAmountSum: number;
+    wonAmountCount: number;
+    upsellAmountSum: number;
+    upsellAmountCount: number;
+  }>();
+
+  for (const d of deals) {
+    const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    const qtr = toQuarter(d.properties[cfg.dealCloseDateProperty]);
+    if (!region || !sqlType || !qtr) continue;
+    if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) continue;
+
+    const key = `${region}|${sqlType}|${qtr.year}|${qtr.quarter}`;
+    const m = qMetrics.get(key) ?? {
+      closedWon: 0, closedLost: 0,
+      wonAmountSum: 0, wonAmountCount: 0,
+      upsellAmountSum: 0, upsellAmountCount: 0,
+    };
+
+    const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
+    const amountCents = Math.round(amount * 100);
+    const dealType = (d.properties.dealtype ?? "").toLowerCase();
+
+    // All deals in this loop are closed-won (fetched by stage filter)
+    m.closedWon++;
+    if (cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()))) {
+      m.upsellAmountSum += amountCents;
+      m.upsellAmountCount++;
+    } else {
+      m.wonAmountSum += amountCents;
+      m.wonAmountCount++;
+    }
+    qMetrics.set(key, m);
+  }
+
+  // Write quarterly metrics
+  console.log("[HubSpot Sync] Writing quarterly metrics...");
+  let qmCount = 0;
+  for (const [key, m] of qMetrics) {
+    const [regionName, sqlTypeName, yearStr, quarterStr] = key.split("|");
+    const regionId = regionByName.get(regionName);
+    const sqlTypeId = sqlTypeByName.get(sqlTypeName);
+    if (!regionId || !sqlTypeId) continue;
+
+    const ratio = m.closedWon > 0
+      ? Math.round(((m.closedWon + m.closedLost) / m.closedWon) * 10000)
+      : 0;
+
+    const avgAcvNew = m.wonAmountCount > 0
+      ? Math.round(m.wonAmountSum / m.wonAmountCount)
+      : 0;
+
+    const avgAcvUpsell = m.upsellAmountCount > 0
+      ? Math.round(m.upsellAmountSum / m.upsellAmountCount)
+      : 0;
+
+    try {
+      await db.upsertQuarterlyMetric({
+        companyId,
+        regionId,
+        sqlTypeId,
+        year: parseInt(yearStr),
+        quarter: parseInt(quarterStr),
+        pipelineCoverRatio: ratio,
+        avgAcvNew,
+        avgAcvUpsell,
+        totalClosedWon: m.closedWon,
+        totalClosedLost: m.closedLost,
+        customerCount: 0,
+      });
+      qmCount++;
+    } catch (err) {
+      stats.errors.push(`Quarterly metric upsert (${key}): ${err instanceof Error ? err.message : err}`);
+    }
+  }
+  console.log(`[HubSpot Sync] Upserted ${qmCount} quarterly metric records`);
+
+  // Build unified actuals from contacts (SQLs + Opps by SQL date), deals (revenue + wins by close date)
+  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number; wins: number }>();
 
   for (const [key, volume] of sqlVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
     existing.sqls = volume;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, count] of oppVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
     existing.opps = count;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, act] of actualRevenues) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
     existing.revenue += act.revenue;
+    unifiedActuals.set(key, existing);
+  }
+
+  // Add actualWins from deal metrics
+  for (const [key, m] of qMetrics) {
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
+    existing.wins = m.closedWon;
     unifiedActuals.set(key, existing);
   }
 
@@ -574,6 +663,7 @@ export async function syncFromHubSpot(
         actualSqls: act.sqls,
         actualOpps: act.opps,
         actualRevenue: act.revenue,
+        actualWins: act.wins,
       });
       stats.actualsUpserted++;
     } catch (err) {

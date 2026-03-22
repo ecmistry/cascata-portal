@@ -592,6 +592,151 @@ export const appRouter = router({
 
   // Dashboard router
   dashboard: router({
+    rScores: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const { computeRScores } = await import("./pearsonEngine");
+        return await computeRScores(input.companyId);
+      }),
+
+    hierarchicalData: protectedProcedure
+      .input(z.object({ companyId: z.number().int().min(1) }))
+      .query(async ({ input }) => {
+        const { companyId } = input;
+        const { computeRScores } = await import("./pearsonEngine");
+        const { computeRag, computeAttainment } = await import("./ragEngine");
+
+        const [regionsList, sqlTypesList, forecastsData, actualsData, rScores] = await Promise.all([
+          db.getRegionsByCompany(companyId).then(r => r.filter(x => x.enabled)),
+          db.getSqlTypesByCompany(companyId).then(s => s.filter(x => x.enabled)),
+          db.getForecastsByCompany(companyId),
+          db.getActualsByCompany(companyId),
+          computeRScores(companyId),
+        ]);
+
+        const now = new Date();
+        const curYear = now.getFullYear();
+        const curQ = Math.ceil((now.getMonth() + 1) / 3);
+
+        type RagStatus = "green" | "amber" | "red";
+        interface MetricCell {
+          model: number;
+          actual: number | null;
+          rag: RagStatus | null;
+        }
+        interface HierarchyQuarter {
+          year: number;
+          quarter: number;
+          label: string;
+          isHistorical: boolean;
+          sql: MetricCell;
+          ocr: MetricCell;
+          owr: MetricCell;
+        }
+        interface HierarchyRow {
+          id: string;
+          label: string;
+          level: 1 | 2 | 3;
+          regionId?: number;
+          sqlTypeId?: number;
+          quarters: HierarchyQuarter[];
+          rScore?: number;
+        }
+
+        // Collect unique quarters
+        const quarterSet = new Set<string>();
+        for (const f of forecastsData) quarterSet.add(`${f.year}-${f.quarter}`);
+        for (const a of actualsData) quarterSet.add(`${a.year}-${a.quarter}`);
+        const quarters = Array.from(quarterSet)
+          .sort()
+          .map(k => {
+            const [y, q] = k.split("-").map(Number);
+            return { year: y, quarter: q, label: `Q${q} ${String(y).slice(2)}` };
+          });
+
+        // Build forecast/actual lookup maps
+        const fMap = new Map<string, typeof forecastsData[0]>();
+        for (const f of forecastsData) fMap.set(`${f.regionId}-${f.sqlTypeId}-${f.year}-${f.quarter}`, f);
+        const aMap = new Map<string, typeof actualsData[0]>();
+        for (const a of actualsData) aMap.set(`${a.regionId}-${a.sqlTypeId}-${a.year}-${a.quarter}`, a);
+
+        const OPPS_MULT = 100; // OPPORTUNITY_PRECISION_MULTIPLIER
+
+        function buildQuarters(regionIds: number[], sqlTypeIds: number[]): HierarchyQuarter[] {
+          return quarters.map(q => {
+            const isHist = q.year < curYear || (q.year === curYear && q.quarter < curQ);
+            let mSql = 0, mOcr = 0, aSql = 0, aOcr = 0, aOwr = 0;
+            for (const rid of regionIds) {
+              for (const sid of sqlTypeIds) {
+                const fk = `${rid}-${sid}-${q.year}-${q.quarter}`;
+                const f = fMap.get(fk);
+                const a = aMap.get(fk);
+                if (f) { mSql += f.predictedSqls; mOcr += f.predictedOpps / OPPS_MULT; }
+                if (a) { aSql += a.actualSqls; aOcr += a.actualOpps; aOwr += a.actualWins; }
+              }
+            }
+            return {
+              year: q.year,
+              quarter: q.quarter,
+              label: q.label,
+              isHistorical: isHist,
+              sql: { model: mSql, actual: isHist ? aSql : null, rag: isHist ? computeRag(aSql, mSql) : null },
+              ocr: { model: mOcr, actual: isHist ? aOcr : null, rag: isHist ? computeRag(aOcr, mOcr) : null },
+              owr: { model: 0, actual: isHist ? aOwr : null, rag: null },
+            };
+          });
+        }
+
+        // Level 3: Motion rows
+        const motions: HierarchyRow[][] = [];
+        for (const region of regionsList) {
+          const regionMotions: HierarchyRow[] = [];
+          for (const st of sqlTypesList) {
+            regionMotions.push({
+              id: `motion-${region.name}-${st.name}`,
+              label: st.displayName || st.name,
+              level: 3,
+              regionId: region.id,
+              sqlTypeId: st.id,
+              quarters: buildQuarters([region.id], [st.id]),
+            });
+          }
+          motions.push(regionMotions);
+        }
+
+        // Level 2: Region rows
+        const allSqlTypeIds = sqlTypesList.map(s => s.id);
+        const regionRows: HierarchyRow[] = regionsList.map((region, ri) => {
+          const rScoreEntry = rScores.perRegion.find(r => r.regionId === region.id && r.metricType === "overall");
+          return {
+            id: `region-${region.name}`,
+            label: region.displayName || region.name,
+            level: 2,
+            regionId: region.id,
+            quarters: buildQuarters([region.id], allSqlTypeIds),
+            rScore: rScoreEntry && isFinite(rScoreEntry.rScore) ? rScoreEntry.rScore : undefined,
+          };
+        });
+
+        // Level 1: Global row
+        const allRegionIds = regionsList.map(r => r.id);
+        const globalRow: HierarchyRow = {
+          id: "global",
+          label: "All Regions",
+          level: 1,
+          quarters: buildQuarters(allRegionIds, allSqlTypeIds),
+          rScore: isFinite(rScores.global.overall) ? rScores.global.overall : undefined,
+        };
+
+        return {
+          quarters: quarters.map(q => ({ year: q.year, quarter: q.quarter, label: q.label })),
+          global: globalRow,
+          regions: regionRows,
+          motions,
+          rScores,
+        };
+      }),
+
     playground: router({
       cascataTest: publicProcedure
         .input(

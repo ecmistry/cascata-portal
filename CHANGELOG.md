@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-03-22
+
+### Added
+- **Pearson R-score engine** (`server/pearsonEngine.ts`): Computes per-region and global Pearson correlation coefficients for Opportunity Coverage Rate (OCR) and Opportunity Win Rate (OWR) between model forecasts and actuals
+- **RAG performance engine** (`server/ragEngine.ts`): Red/Amber/Green status indicators comparing model output vs actuals at Global, Region, and Motion hierarchy levels (Green >= 90%, Amber >= 70%, Red < 70%)
+- **Hierarchical cascade component** (`HierarchicalCascade.tsx`): Three-level expandable tree view (Global -> Region -> Motion) with Model/Actual dual values, RAG dot indicators, and R-score badges
+- **Dashboard overhaul**: R-score headline cards, RAG attainment summary, and hierarchical performance view replace the previous KPI cards as the primary dashboard view. Classic analytics (time series, regional charts) moved to a collapsible section
+- **6-quarter one-time average**: Cascade engine now computes a fixed average from the last 6 completed quarters for conversion rate, win rate, pipeline cover ratio, and ACV — applied uniformly to all future quarters
+- **Quarterly metrics table** (`quarterlyMetrics`): Stores per-quarter aggregated metrics (pipeline cover ratio, avg ACV new/upsell, closed won/lost counts) populated during HubSpot sync
+- **R-score history table** (`rScoreHistory`): Stores historical Pearson R values per region and globally for trend tracking
+- **actualWins column**: `actuals` table now tracks closed-won deal counts per quarter/region/motion
+- **Model|Actual cascade columns**: Cascade sheets now show an "Act" column alongside model values for historical quarters, with green-highlighted actual data
+- **tRPC procedures**: `dashboard.rScores` and `dashboard.hierarchicalData` for the new dashboard components
+- **SyncConfig extensions**: `companyCustomerField`, `companyCustomerValues`, `rollingWindowQuarters` for future phase support
+
+### Changed
+- **Cascade engine**: Uses historical actuals for past quarters and 6Q one-time averages for future quarters (conversion, win rate, ACV) instead of uniform rates
+- **HubSpot sync**: Now aggregates per-quarter deal metrics and writes to `quarterlyMetrics` table; populates `actualWins` in actuals upsert
+- **Database schema**: Added `quarterlyMetrics`, `rScoreHistory` tables and `actualWins` column via migration `0008_v2_schema.sql`
+- **Dashboard layout**: Primary view is now the hierarchical cascade with R-score and RAG cards; existing charts are in a collapsible "Classic Analytics" section
+
 ## [1.7.0] - 2026-03-15
 
 ### Added

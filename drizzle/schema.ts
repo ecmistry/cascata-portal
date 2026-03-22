@@ -70,6 +70,9 @@ export interface SyncConfig {
   defaultSqlTimingTwoQ?: number;     // basis points, e.g. 100 = 1%
   defaultOppTiming?: number[];       // fractions, e.g. [0.14, 0.33, 0.25, 0.15, 0.07, 0.04, 0.02]
   defaultConversionRate?: number;    // basis points, e.g. 5000 = 50%
+  companyCustomerField?: string;     // HubSpot Company property identifying customers
+  companyCustomerValues?: string[];  // Values meaning 'is customer' e.g. ['customer']
+  rollingWindowQuarters?: number;    // default 6 (quarters for one-time average)
 }
 
 /**
@@ -221,6 +224,7 @@ export const actuals = mysqlTable("actuals", {
   actualSqls: int("actualSqls").notNull().default(0),
   actualOpps: int("actualOpps").notNull().default(0),
   actualRevenue: int("actualRevenue").notNull().default(0), // Revenue in cents
+  actualWins: int("actualWins").notNull().default(0), // closed-won deal count
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -250,6 +254,52 @@ export const dataQualityReports = mysqlTable("dataQualityReports", {
 
 export type DataQualityReportRow = typeof dataQualityReports.$inferSelect;
 export type InsertDataQualityReport = typeof dataQualityReports.$inferInsert;
+
+/**
+ * Per-quarter aggregated metrics for 6-quarter one-time average calculation.
+ * Populated during HubSpot sync from closed deal data.
+ */
+export const quarterlyMetrics = mysqlTable("quarterlyMetrics", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  regionId: int("regionId").notNull(),
+  sqlTypeId: int("sqlTypeId").notNull(),
+  year: int("year").notNull(),
+  quarter: int("quarter").notNull(),
+  pipelineCoverRatio: int("pipelineCoverRatio").notNull().default(0), // basis points
+  avgAcvNew: int("avgAcvNew").notNull().default(0), // cents
+  avgAcvUpsell: int("avgAcvUpsell").notNull().default(0), // cents
+  totalClosedWon: int("totalClosedWon").notNull().default(0),
+  totalClosedLost: int("totalClosedLost").notNull().default(0),
+  customerCount: int("customerCount").notNull().default(0), // Phase 2
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => ({
+  uniqueQuarterlyMetric: unique("qm_co_reg_sql_yr_q_unique").on(
+    table.companyId, table.regionId, table.sqlTypeId, table.year, table.quarter
+  ),
+}));
+
+export type QuarterlyMetric = typeof quarterlyMetrics.$inferSelect;
+export type InsertQuarterlyMetric = typeof quarterlyMetrics.$inferInsert;
+
+/**
+ * R-score history: Pearson R values per region/global, computed at forecast time.
+ */
+export const rScoreHistory = mysqlTable("rScoreHistory", {
+  id: int("id").autoincrement().primaryKey(),
+  companyId: int("companyId").notNull(),
+  metricType: mysqlEnum("metricType", ["ocr", "owr", "overall"]).notNull(),
+  regionId: int("regionId"), // null = global
+  year: int("year").notNull(),
+  quarter: int("quarter").notNull(),
+  rScore: decimal("rScore", { precision: 6, scale: 4 }).notNull(),
+  sampleSize: int("sampleSize").notNull().default(0),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type RScoreHistoryRow = typeof rScoreHistory.$inferSelect;
+export type InsertRScoreHistory = typeof rScoreHistory.$inferInsert;
 
 /**
  * Saved What-If scenarios for comparison and sharing

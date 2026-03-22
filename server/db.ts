@@ -13,6 +13,8 @@ import {
   actuals, Actual, InsertActual,
   scenarios, Scenario, InsertScenario,
   dataQualityReports, InsertDataQualityReport, DataQualityReportRow,
+  quarterlyMetrics, QuarterlyMetric, InsertQuarterlyMetric,
+  rScoreHistory, RScoreHistoryRow, InsertRScoreHistory,
 } from "../drizzle/schema";
 import { ENV } from './_core/env';
 import { ERROR_MESSAGES } from '@shared/const';
@@ -714,6 +716,7 @@ export async function upsertActual(data: InsertActual) {
       actualSqls: data.actualSqls,
       actualOpps: data.actualOpps,
       actualRevenue: data.actualRevenue,
+      actualWins: data.actualWins,
       updatedAt: new Date(),
     },
   });
@@ -951,4 +954,57 @@ export async function deleteScenario(id: number) {
   }
   
   await db.delete(scenarios).where(eq(scenarios.id, id));
+}
+
+// ============================================================================
+// Quarterly Metrics Management
+// ============================================================================
+
+export async function upsertQuarterlyMetric(data: InsertQuarterlyMetric) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(quarterlyMetrics).values(data).onDuplicateKeyUpdate({
+    set: {
+      pipelineCoverRatio: data.pipelineCoverRatio,
+      avgAcvNew: data.avgAcvNew,
+      avgAcvUpsell: data.avgAcvUpsell,
+      totalClosedWon: data.totalClosedWon,
+      totalClosedLost: data.totalClosedLost,
+      customerCount: data.customerCount,
+      updatedAt: new Date(),
+    },
+  });
+}
+
+export async function getQuarterlyMetricsByCompany(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select().from(quarterlyMetrics).where(eq(quarterlyMetrics.companyId, companyId));
+    },
+    () => [] as QuarterlyMetric[],
+  );
+}
+
+// ============================================================================
+// R-Score History Management
+// ============================================================================
+
+export async function upsertRScoreHistory(data: InsertRScoreHistory) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+
+  await db.insert(rScoreHistory).values(data);
+}
+
+export async function getRScoreHistoryByCompany(companyId: number) {
+  return withDbOrDevStore(
+    async (db) => {
+      return await db.select()
+        .from(rScoreHistory)
+        .where(eq(rScoreHistory.companyId, companyId))
+        .orderBy(desc(rScoreHistory.createdAt));
+    },
+    () => [] as RScoreHistoryRow[],
+  );
 }

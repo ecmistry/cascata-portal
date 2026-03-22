@@ -103,6 +103,8 @@ interface PanelRow {
   inputValue: number;
   conversionRate?: number;
   cascadeValues: number[];
+  actualInput?: number | null;
+  isHistorical?: boolean;
 }
 
 /**
@@ -114,6 +116,7 @@ function CascadeTable({
   quarters,
   rows,
   totals,
+  actualTotals,
   showSqlsCols,
   variant,
 }: {
@@ -122,6 +125,7 @@ function CascadeTable({
   quarters: QLabel[];
   rows: PanelRow[];
   totals: number[];
+  actualTotals?: (number | null)[];
   showSqlsCols: boolean;
   variant: "sql" | "opp";
 }) {
@@ -135,7 +139,8 @@ function CascadeTable({
   const visibleRows = rows.filter(r => r.inputValue > 0 || r.cascadeValues.some(v => v > 0));
   const probRows = quarters.filter((_: QLabel, idx: number) => idx + probabilities.length - 1 < quarters.length);
 
-  const fixedW = showSqlsCols ? 150 : 108;
+  const hasActuals = rows.some(r => r.actualInput != null);
+  const fixedW = showSqlsCols ? (hasActuals ? 190 : 150) : (hasActuals ? 148 : 108);
   const totalW = fixedW + quarters.length * COL_W;
 
   return (
@@ -144,7 +149,7 @@ function CascadeTable({
       <thead>
         <tr>
           <th
-            colSpan={showSqlsCols ? 3 + quarters.length : 2 + quarters.length}
+            colSpan={(showSqlsCols ? 3 : 2) + (hasActuals ? 1 : 0) + quarters.length}
             className={`text-left p-1.5 text-xs font-bold border-b ${isSql ? "bg-amber-50/70 text-amber-900" : "bg-red-50/50 text-red-900"}`}
           >
             {label}
@@ -164,6 +169,7 @@ function CascadeTable({
           {!showSqlsCols && (
             <th className={`p-1 border-r ${probBg}`} style={{ width: 45, minWidth: 45 }}></th>
           )}
+          {hasActuals && <th className={`p-1 border-r ${probBg}`} style={{ width: 40, minWidth: 40 }}></th>}
           {quarters.map((q: QLabel) => (
             <th key={`ph-${q.label}`} className={`text-right p-1 font-semibold border-r last:border-r-0 ${probBg}`} style={{ width: COL_W, minWidth: COL_W }}>
               {q.label}
@@ -178,6 +184,7 @@ function CascadeTable({
             <td className={`p-1 font-medium border-r ${labelBg}`}>{rowQ.label}</td>
             {showSqlsCols ? <><td className={`p-1 border-r ${probBg}`}></td><td className={`p-1 border-r ${probBg}`}></td></> :
              <td className={`p-1 border-r ${probBg}`}></td>}
+            {hasActuals && <td className={`p-1 border-r ${probBg}`}></td>}
             {quarters.map((_: QLabel, colIdx: number) => {
               const off = colIdx - rowIdx;
               const isP = off >= 0 && off < probabilities.length;
@@ -208,6 +215,7 @@ function CascadeTable({
           ) : (
             <td className={`text-right p-1.5 font-semibold border-r ${cyanBg}`}>Opps</td>
           )}
+          {hasActuals && <td className={`text-right p-1.5 font-semibold border-r ${cyanBg} text-emerald-700`}>Act</td>}
           {quarters.map((q: QLabel) => (
             <td key={`h-${q.label}`} className={`text-right p-1.5 font-semibold border-r last:border-r-0 ${cyanBg}`}>{q.label}</td>
           ))}
@@ -228,6 +236,11 @@ function CascadeTable({
               ) : (
                 <td className="text-right p-1 font-mono border-r">{has ? fmt(row.inputValue) : ""}</td>
               )}
+              {hasActuals && (
+                <td className={`text-right p-1 font-mono border-r ${row.isHistorical ? "font-medium text-emerald-700" : "text-muted-foreground/40"}`}>
+                  {row.isHistorical && row.actualInput != null ? fmt(row.actualInput, 0) : "—"}
+                </td>
+              )}
               {quarters.map((_: QLabel, cIdx: number) => {
                 const v = row.cascadeValues[cIdx] || 0;
                 const off = cIdx - gIdx;
@@ -247,7 +260,7 @@ function CascadeTable({
 
         {/* Totals row */}
         <tr className={`border-t-2 border-black ${cyanBg} font-semibold`}>
-          <td className={`p-1.5 border-r ${cyanBg} text-[8px] sm:text-[10px]`} colSpan={showSqlsCols ? 3 : 2}>
+          <td className={`p-1.5 border-r ${cyanBg} text-[8px] sm:text-[10px]`} colSpan={(showSqlsCols ? 3 : 2) + (hasActuals ? 1 : 0)}>
             {isSql ? "Total Opps Created" : "Total Deals Won"}
           </td>
           {quarters.map((q: QLabel, i: number) => (
@@ -318,16 +331,20 @@ export default function CascadeSheet() {
     const allQ = cascadeData.quarterColumns;
     const gi = filteredQuarters.map((fq: QLabel) => allQ.findIndex((q: QLabel) => q.year === fq.year && q.quarter === fq.quarter));
     return {
-      sqlRows: cascadeData.rows.map(r => ({
+      sqlRows: cascadeData.rows.map((r: any) => ({
         quarter: r.quarter,
         inputValue: r.sqls,
         conversionRate: r.conversionRate,
         cascadeValues: gi.map(i => r.cascadeValues[i] || 0),
+        actualInput: r.actualSqls ?? null,
+        isHistorical: r.isHistorical ?? false,
       })),
-      oppRows: cascadeData.oppRows.map(r => ({
+      oppRows: cascadeData.oppRows.map((r: any) => ({
         quarter: r.quarter,
         inputValue: r.opps,
         cascadeValues: gi.map(i => r.cascadeValues[i] || 0),
+        actualInput: r.actualWins ?? null,
+        isHistorical: r.isHistorical ?? false,
       })),
       sqlTotals: gi.map(i => cascadeData.totalOppsPerQuarter[i] || 0),
       oppTotals: gi.map(i => cascadeData.totalWonPerQuarter[i] || 0),

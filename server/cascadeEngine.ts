@@ -57,6 +57,39 @@ function getQuarterAhead(year: number, quarter: number, periods: number): Quarte
 }
 
 /**
+ * Compute one-time average of a metric over the last N completed quarters.
+ * This is NOT a rolling average -- computed once at forecast time and applied
+ * to all future quarters uniformly.
+ */
+function computeSixQuarterAverage(
+  quarterlyValues: Map<string, number>,
+  currentYear: number,
+  currentQuarter: number,
+  windowSize: number = 6
+): number | null {
+  const completed: { key: string; val: number }[] = [];
+  for (const [key, val] of quarterlyValues) {
+    const [yStr, qStr] = key.split("-");
+    const y = Number(yStr);
+    const q = Number(qStr);
+    if (y < currentYear || (y === currentYear && q < currentQuarter)) {
+      completed.push({ key, val });
+    }
+  }
+
+  completed.sort((a, b) => a.key.localeCompare(b.key));
+  const window = completed.slice(-windowSize);
+
+  if (window.length < 4) return null;
+
+  return window.reduce((sum, item) => sum + item.val, 0) / window.length;
+}
+
+function isHistorical(y: number, q: number, curY: number, curQ: number): boolean {
+  return y < curY || (y === curY && q < curQ);
+}
+
+/**
  * Calculate cascade forecast for a company
  */
 export async function calculateCascade(input: CascadeInput): Promise<CascadeResult[]> {
@@ -70,6 +103,7 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     dealEconomicsData,
     timeDistData,
     actualsData,
+    quarterlyMetricsData,
     company,
   ] = await Promise.all([
     db.getRegionsByCompany(companyId).then(regions => regions.filter(r => r.enabled)),
@@ -79,10 +113,17 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     db.getDealEconomicsByCompany(companyId),
     db.getTimeDistributionsByCompany(companyId),
     db.getActualsByCompany(companyId),
+    db.getQuarterlyMetricsByCompany(companyId),
     db.getCompanyById(companyId),
   ]);
 
   const syncConfig = company ? db.parseSyncConfig(company) : null;
+  const windowSize = syncConfig?.rollingWindowQuarters ?? 6;
+
+  // Current quarter boundary: historical vs forecast
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
 
   const conversionMap = new Map<string, typeof conversionRatesData[0]>();
   conversionRatesData.forEach(cr => {
@@ -99,14 +140,21 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
     timeDistMap.set(td.sqlTypeId, td);
   });
 
-  // Build per-quarter actuals for per-quarter conversion rates
-  const quarterActualsMap = new Map<string, { sqls: number; opps: number }>();
+  // Build per-quarter actuals lookup
+  const quarterActualsMap = new Map<string, { sqls: number; opps: number; wins: number }>();
   for (const a of actualsData) {
     const key = `${a.regionId}-${a.sqlTypeId}-${a.year}-${a.quarter}`;
-    const existing = quarterActualsMap.get(key) || { sqls: 0, opps: 0 };
+    const existing = quarterActualsMap.get(key) || { sqls: 0, opps: 0, wins: 0 };
     existing.sqls += a.actualSqls ?? 0;
     existing.opps += a.actualOpps ?? 0;
+    existing.wins += a.actualWins ?? 0;
     quarterActualsMap.set(key, existing);
+  }
+
+  // Build per-quarter metrics lookup (pipeline cover ratio, ACV)
+  const qmMap = new Map<string, typeof quarterlyMetricsData[0]>();
+  for (const qm of quarterlyMetricsData) {
+    qmMap.set(`${qm.regionId}-${qm.sqlTypeId}-${qm.year}-${qm.quarter}`, qm);
   }
 
   // Configurable defaults from sync config
@@ -123,7 +171,41 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
       const convKey = `${region.id}-${sqlType.id}`;
       const conversion = conversionMap.get(convKey);
 
-      // Compute overall average conversion from actuals for this region+sqlType
+      // Build per-quarter conversion rate map for 6Q average
+      const perQConvRates = new Map<string, number>();
+      for (const a of actualsData) {
+        if (a.regionId === region.id && a.sqlTypeId === sqlType.id && (a.actualSqls ?? 0) > 0) {
+          const rate = Math.min(Math.round(((a.actualOpps ?? 0) / a.actualSqls) * 10000), 10000);
+          perQConvRates.set(`${a.year}-${a.quarter}`, rate);
+        }
+      }
+
+      // Build per-quarter win rate map for 6Q average
+      const perQWinRates = new Map<string, number>();
+      for (const a of actualsData) {
+        if (a.regionId === region.id && a.sqlTypeId === sqlType.id && (a.actualOpps ?? 0) > 0) {
+          const rate = Math.min(Math.round(((a.actualWins ?? 0) / a.actualOpps) * 10000), 10000);
+          perQWinRates.set(`${a.year}-${a.quarter}`, rate);
+        }
+      }
+
+      // Build per-quarter ACV map for 6Q average
+      const perQAcvNew = new Map<string, number>();
+      const perQAcvUpsell = new Map<string, number>();
+      for (const qm of quarterlyMetricsData) {
+        if (qm.regionId === region.id && qm.sqlTypeId === sqlType.id) {
+          if (qm.avgAcvNew > 0) perQAcvNew.set(`${qm.year}-${qm.quarter}`, qm.avgAcvNew);
+          if (qm.avgAcvUpsell > 0) perQAcvUpsell.set(`${qm.year}-${qm.quarter}`, qm.avgAcvUpsell);
+        }
+      }
+
+      // Compute 6Q one-time averages (fixed for all future quarters)
+      const sixQConvRate = computeSixQuarterAverage(perQConvRates, currentYear, currentQuarter, windowSize);
+      const sixQWinRate = computeSixQuarterAverage(perQWinRates, currentYear, currentQuarter, windowSize);
+      const sixQAcvNew = computeSixQuarterAverage(perQAcvNew, currentYear, currentQuarter, windowSize);
+      const sixQAcvUpsell = computeSixQuarterAverage(perQAcvUpsell, currentYear, currentQuarter, windowSize);
+
+      // Overall fallback conversion rate (all-time average)
       let totalActualSqls = 0;
       let totalActualOpps = 0;
       for (const a of actualsData) {
@@ -150,14 +232,14 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
         } catch { /* use default */ }
       }
 
-      // Win rates
-      const winRateNew = (conversion?.winRateNew ?? CASCADE_CONSTANTS.DEFAULT_WIN_RATE_BP) / 10000;
-      const winRateUpsell = (conversion?.winRateUpsell ?? 0) / 10000;
-      const combinedWinRate = winRateNew + winRateUpsell;
+      // Default win rates from conversion table
+      const defaultWinRateNew = (conversion?.winRateNew ?? CASCADE_CONSTANTS.DEFAULT_WIN_RATE_BP) / 10000;
+      const defaultWinRateUpsell = (conversion?.winRateUpsell ?? 0) / 10000;
+      const defaultCombinedWinRate = defaultWinRateNew + defaultWinRateUpsell;
 
       const dealEcon = dealEconomicsMap.get(region.id);
-      const avgAcvNew = dealEcon?.acvNew || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
-      const avgAcvUpsell = dealEcon?.acvUpsell || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
+      const defaultAcvNew = dealEcon?.acvNew || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
+      const defaultAcvUpsell = dealEcon?.acvUpsell || CASCADE_CONSTANTS.DEFAULT_ACV_CENTS;
 
       // Pre-calculate base opps per quarter (SQL volume × conversion rate)
       const baseOpps: number[] = [];
@@ -169,14 +251,17 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
         );
         const sqlVolume = historyRecord?.volume || 0;
 
-        // Use per-quarter conversion from actuals when available
-        const aKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
-        const actualData = quarterActualsMap.get(aKey);
         let convRate: number;
-        if (actualData && actualData.sqls > 0) {
-          convRate = Math.min(Math.round((actualData.opps / actualData.sqls) * 10000), 10000);
+        if (isHistorical(q.year, q.quarter, currentYear, currentQuarter)) {
+          // Historical: use actual per-quarter conversion
+          const aKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
+          const actualData = quarterActualsMap.get(aKey);
+          convRate = (actualData && actualData.sqls > 0)
+            ? Math.min(Math.round((actualData.opps / actualData.sqls) * 10000), 10000)
+            : overallConvRate;
         } else {
-          convRate = overallConvRate;
+          // Future: use the fixed 6Q one-time average
+          convRate = sixQConvRate ?? overallConvRate;
         }
         baseOpps.push((sqlVolume * convRate) / 10000);
       }
@@ -194,6 +279,14 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
       // Apply opp win timing: spread expected wins across quarters
       const totalWinsPerQ = new Array(totalQuarters).fill(0);
       for (let qo = 0; qo < totalQuarters; qo++) {
+        const q = getQuarterAhead(startYear, startQuarter, qo);
+        let combinedWinRate: number;
+        if (isHistorical(q.year, q.quarter, currentYear, currentQuarter)) {
+          const qWinRate = perQWinRates.get(`${q.year}-${q.quarter}`);
+          combinedWinRate = qWinRate !== undefined ? qWinRate / 10000 : defaultCombinedWinRate;
+        } else {
+          combinedWinRate = sixQWinRate !== null ? sixQWinRate / 10000 : defaultCombinedWinRate;
+        }
         const expectedWins = totalOppsPerQ[qo] * (combinedWinRate > 0 ? combinedWinRate : 1);
         for (let p = 0; p < oppProbs.length; p++) {
           if (qo + p < totalQuarters) {
@@ -202,7 +295,7 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
         }
       }
 
-      // Build results with revenue
+      // Build results with revenue (use 6Q ACV average for future, actual for historical)
       for (let qo = 0; qo < totalQuarters; qo++) {
         const q = getQuarterAhead(startYear, startQuarter, qo);
         const historyRecord = sqlHistoryData.find(
@@ -210,9 +303,23 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
                h.year === q.year && h.quarter === q.quarter
         );
 
+        let acvNew: number, acvUpsell: number;
+        if (isHistorical(q.year, q.quarter, currentYear, currentQuarter)) {
+          const qmKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
+          const qm = qmMap.get(qmKey);
+          acvNew = (qm && qm.avgAcvNew > 0) ? qm.avgAcvNew : defaultAcvNew;
+          acvUpsell = (qm && qm.avgAcvUpsell > 0) ? qm.avgAcvUpsell : defaultAcvUpsell;
+        } else {
+          acvNew = sixQAcvNew ?? defaultAcvNew;
+          acvUpsell = sixQAcvUpsell ?? defaultAcvUpsell;
+        }
+
         const wins = totalWinsPerQ[qo];
-        const revenueNew = Math.round(wins * (winRateNew / (combinedWinRate || 1)) * avgAcvNew);
-        const revenueUpsell = Math.round(wins * (winRateUpsell / (combinedWinRate || 1)) * avgAcvUpsell);
+        const winRateNew = defaultWinRateNew;
+        const winRateUpsell = defaultWinRateUpsell;
+        const combinedWR = defaultCombinedWinRate;
+        const revenueNew = Math.round(wins * (winRateNew / (combinedWR || 1)) * acvNew);
+        const revenueUpsell = Math.round(wins * (winRateUpsell / (combinedWR || 1)) * acvUpsell);
 
         results.push({
           region: region.name,

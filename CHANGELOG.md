@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0] - 2026-03-11
+
+### Added
+- **Actual revenue split**: `actualRevenueNew` and `actualRevenueUpsell` columns on the `actuals` table, populated during HubSpot sync by splitting closed-won deal amounts by deal type (new business vs upsell)
+- **Full target model**: Extended `revenueTargets` table with `targetSqls`, `targetOpps`, `targetWins` columns alongside existing revenue targets — enables pipeline-level target tracking (not just revenue)
+- **Target Planning UI**: Revenue Planning page now shows 6 target rows per region: SQLs, Opps, Wins, $ New Biz, $ Upsell, $ Total — a full cascade target model
+- **Actuals vs Targets RAG**: Hierarchical cascade view now shows RAG indicators comparing actual performance against targets at every level — SQL RAG (S), Opp RAG (O), and Revenue RAG dot
+- **Actual revenue in hierarchy**: Hierarchical cascade view now shows actual revenue (new + upsell) on a second line below model forecast for historical quarters, with emerald colouring to distinguish from model values
+- **Rich tooltips**: Hovering on revenue cells now shows three layers — Model Forecast, Actuals, and Target — with full breakdowns
+
+### Changed
+- **HubSpot sync**: `unifiedActuals` map now carries `revenueNew` and `revenueUpsell` from `qMetrics` deal type classification, written to the enriched `actuals` columns
+- **Database schema**: Two new columns on `actuals` (`actualRevenueNew`, `actualRevenueUpsell`), three on `revenueTargets` (`targetSqls`, `targetOpps`, `targetWins`) via migration `0011_phase4_actuals_targets_enrichment.sql`
+- **tRPC routes**: Target upsert/bulkUpsert now accept `targetSqls`, `targetOpps`, `targetWins`; `hierarchicalData` loads target data and computes target-vs-actual RAG
+- **Hierarchical cascade**: Column headers updated to "M/A · Rev · Tgt" to reflect three-layer data display
+
 ## [2.2.0] - 2026-03-11
 
 ### Added

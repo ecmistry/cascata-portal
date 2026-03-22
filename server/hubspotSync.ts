@@ -707,30 +707,32 @@ export async function syncFromHubSpot(
   console.log(`[HubSpot Sync] Upserted ${qmCount} quarterly metric records`);
 
   // Build unified actuals from contacts (SQLs + Opps by SQL date), deals (revenue + wins by close date)
-  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number; wins: number; upsellWins: number }>();
+  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number; revenueNew: number; revenueUpsell: number; wins: number; upsellWins: number }>();
 
   for (const [key, volume] of sqlVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, revenueNew: 0, revenueUpsell: 0, wins: 0, upsellWins: 0 };
     existing.sqls = volume;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, count] of oppVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, revenueNew: 0, revenueUpsell: 0, wins: 0, upsellWins: 0 };
     existing.opps = count;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, act] of actualRevenues) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, revenueNew: 0, revenueUpsell: 0, wins: 0, upsellWins: 0 };
     existing.revenue += act.revenue;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, m] of qMetrics) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, revenueNew: 0, revenueUpsell: 0, wins: 0, upsellWins: 0 };
     existing.wins = m.closedWon;
     existing.upsellWins = m.upsellWon;
+    existing.revenueNew = m.wonAmountSum;
+    existing.revenueUpsell = m.upsellAmountSum;
     unifiedActuals.set(key, existing);
   }
 
@@ -746,6 +748,8 @@ export async function syncFromHubSpot(
         actualSqls: act.sqls,
         actualOpps: act.opps,
         actualRevenue: act.revenue,
+        actualRevenueNew: act.revenueNew,
+        actualRevenueUpsell: act.revenueUpsell,
         actualWins: act.wins,
         actualUpsellWins: act.upsellWins,
       });

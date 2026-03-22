@@ -719,6 +719,8 @@ export async function upsertActual(data: InsertActual) {
       actualSqls: data.actualSqls,
       actualOpps: data.actualOpps,
       actualRevenue: data.actualRevenue,
+      actualRevenueNew: data.actualRevenueNew,
+      actualRevenueUpsell: data.actualRevenueUpsell,
       actualWins: data.actualWins,
       actualUpsellWins: data.actualUpsellWins,
       updatedAt: new Date(),
@@ -1025,6 +1027,9 @@ export async function upsertRevenueTarget(data: InsertRevenueTarget) {
 
   await db.insert(revenueTargets).values(data).onDuplicateKeyUpdate({
     set: {
+      targetSqls: data.targetSqls,
+      targetOpps: data.targetOpps,
+      targetWins: data.targetWins,
       targetNewBiz: data.targetNewBiz,
       targetUpsell: data.targetUpsell,
       targetTotal: data.targetTotal,

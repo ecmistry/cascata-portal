@@ -171,9 +171,12 @@ function TargetsTab({ companyId, regions, quarters, existingTargets, onSave, isS
     `${regionId}-${year}-${quarter}`;
 
   const initial = useMemo(() => {
-    const map = new Map<CellKey, { newBiz: number; upsell: number; total: number }>();
+    const map = new Map<CellKey, { sqls: number; opps: number; wins: number; newBiz: number; upsell: number; total: number }>();
     for (const t of existingTargets) {
       map.set(buildKey(t.regionId, t.year, t.quarter), {
+        sqls: t.targetSqls ?? 0,
+        opps: t.targetOpps ?? 0,
+        wins: t.targetWins ?? 0,
         newBiz: t.targetNewBiz,
         upsell: t.targetUpsell,
         total: t.targetTotal,
@@ -182,20 +185,22 @@ function TargetsTab({ companyId, regions, quarters, existingTargets, onSave, isS
     return map;
   }, [existingTargets]);
 
-  const [values, setValues] = useState<Map<CellKey, { newBiz: number; upsell: number; total: number }>>(new Map());
+  type TargetVal = { sqls: number; opps: number; wins: number; newBiz: number; upsell: number; total: number };
+  const [values, setValues] = useState<Map<CellKey, TargetVal>>(new Map());
+  const emptyVal: TargetVal = { sqls: 0, opps: 0, wins: 0, newBiz: 0, upsell: 0, total: 0 };
 
   const getVal = useCallback((regionId: number, year: number, quarter: number) => {
     const k = buildKey(regionId, year, quarter);
-    return values.get(k) ?? initial.get(k) ?? { newBiz: 0, upsell: 0, total: 0 };
+    return values.get(k) ?? initial.get(k) ?? emptyVal;
   }, [values, initial]);
 
-  const setVal = useCallback((regionId: number, year: number, quarter: number, field: "newBiz" | "upsell" | "total", cents: number) => {
+  const setVal = useCallback((regionId: number, year: number, quarter: number, field: keyof TargetVal, val: number) => {
     const k = buildKey(regionId, year, quarter);
     setValues(prev => {
       const next = new Map(prev);
-      const cur = next.get(k) ?? initial.get(k) ?? { newBiz: 0, upsell: 0, total: 0 };
-      const updated = { ...cur, [field]: cents };
-      if (field !== "total") {
+      const cur = next.get(k) ?? initial.get(k) ?? { ...emptyVal };
+      const updated = { ...cur, [field]: val };
+      if (field === "newBiz" || field === "upsell") {
         updated.total = updated.newBiz + updated.upsell;
       }
       next.set(k, updated);
@@ -208,12 +213,15 @@ function TargetsTab({ companyId, regions, quarters, existingTargets, onSave, isS
     const targets: any[] = [];
     for (const k of allKeys) {
       const v = values.get(k) ?? initial.get(k);
-      if (!v || (v.newBiz === 0 && v.upsell === 0 && v.total === 0)) continue;
+      if (!v || (v.newBiz === 0 && v.upsell === 0 && v.total === 0 && v.sqls === 0 && v.opps === 0 && v.wins === 0)) continue;
       const [rid, yr, qt] = k.split("-").map(Number);
       targets.push({
         regionId: rid,
         year: yr,
         quarter: qt,
+        targetSqls: v.sqls,
+        targetOpps: v.opps,
+        targetWins: v.wins,
         targetNewBiz: v.newBiz,
         targetUpsell: v.upsell,
         targetTotal: v.total,
@@ -246,43 +254,71 @@ function TargetsTab({ companyId, regions, quarters, existingTargets, onSave, isS
             <tbody>
               {regions.map(region => (
                 <>
-                  <tr key={`${region.id}-nb`} className="border-b hover:bg-blue-50/30">
-                    <td className="p-2 font-medium sticky left-0 bg-white z-10" rowSpan={3}>
+                  <tr key={`${region.id}-sqls`} className="border-b hover:bg-slate-50/30">
+                    <td className="p-2 font-medium sticky left-0 bg-white z-10" rowSpan={6}>
                       {region.displayName || region.name}
                     </td>
-                    <td className="p-2 text-xs text-blue-600 sticky left-32 bg-white z-10">New Biz</td>
+                    <td className="p-2 text-xs text-slate-600 sticky left-32 bg-white z-10">SQLs</td>
+                    {quarters.map(q => {
+                      const v = getVal(region.id, q.year, q.quarter);
+                      return (
+                        <td key={`${region.id}-sqls-${q.label}`} className="p-1 border-l">
+                          <Input type="number" className="h-7 text-xs text-right w-full" defaultValue={v.sqls > 0 ? v.sqls.toString() : ""} placeholder="0" min={0}
+                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "sqls", parseInt(e.target.value) || 0)} />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr key={`${region.id}-opps`} className="border-b hover:bg-purple-50/30">
+                    <td className="p-2 text-xs text-purple-600 sticky left-32 bg-white z-10">Opps</td>
+                    {quarters.map(q => {
+                      const v = getVal(region.id, q.year, q.quarter);
+                      return (
+                        <td key={`${region.id}-opps-${q.label}`} className="p-1 border-l">
+                          <Input type="number" className="h-7 text-xs text-right w-full" defaultValue={v.opps > 0 ? v.opps.toString() : ""} placeholder="0" min={0}
+                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "opps", parseInt(e.target.value) || 0)} />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr key={`${region.id}-wins`} className="border-b hover:bg-emerald-50/30">
+                    <td className="p-2 text-xs text-emerald-600 sticky left-32 bg-white z-10">Wins</td>
+                    {quarters.map(q => {
+                      const v = getVal(region.id, q.year, q.quarter);
+                      return (
+                        <td key={`${region.id}-wins-${q.label}`} className="p-1 border-l">
+                          <Input type="number" className="h-7 text-xs text-right w-full" defaultValue={v.wins > 0 ? v.wins.toString() : ""} placeholder="0" min={0}
+                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "wins", parseInt(e.target.value) || 0)} />
+                        </td>
+                      );
+                    })}
+                  </tr>
+                  <tr key={`${region.id}-nb`} className="border-b hover:bg-blue-50/30">
+                    <td className="p-2 text-xs text-blue-600 sticky left-32 bg-white z-10">$ New Biz</td>
                     {quarters.map(q => {
                       const v = getVal(region.id, q.year, q.quarter);
                       return (
                         <td key={`${region.id}-nb-${q.label}`} className="p-1 border-l">
-                          <Input
-                            className="h-7 text-xs text-right w-full"
-                            defaultValue={v.newBiz > 0 ? (v.newBiz / 100).toString() : ""}
-                            placeholder="0"
-                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "newBiz", parseDollars(e.target.value))}
-                          />
+                          <Input className="h-7 text-xs text-right w-full" defaultValue={v.newBiz > 0 ? (v.newBiz / 100).toString() : ""} placeholder="0"
+                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "newBiz", parseDollars(e.target.value))} />
                         </td>
                       );
                     })}
                   </tr>
                   <tr key={`${region.id}-up`} className="border-b hover:bg-violet-50/30">
-                    <td className="p-2 text-xs text-violet-600 sticky left-32 bg-white z-10">Upsell</td>
+                    <td className="p-2 text-xs text-violet-600 sticky left-32 bg-white z-10">$ Upsell</td>
                     {quarters.map(q => {
                       const v = getVal(region.id, q.year, q.quarter);
                       return (
                         <td key={`${region.id}-up-${q.label}`} className="p-1 border-l">
-                          <Input
-                            className="h-7 text-xs text-right w-full"
-                            defaultValue={v.upsell > 0 ? (v.upsell / 100).toString() : ""}
-                            placeholder="0"
-                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "upsell", parseDollars(e.target.value))}
-                          />
+                          <Input className="h-7 text-xs text-right w-full" defaultValue={v.upsell > 0 ? (v.upsell / 100).toString() : ""} placeholder="0"
+                            onBlur={(e) => setVal(region.id, q.year, q.quarter, "upsell", parseDollars(e.target.value))} />
                         </td>
                       );
                     })}
                   </tr>
                   <tr key={`${region.id}-tot`} className="border-b bg-muted/20">
-                    <td className="p-2 text-xs font-semibold sticky left-32 bg-muted/20 z-10">Total</td>
+                    <td className="p-2 text-xs font-semibold sticky left-32 bg-muted/20 z-10">$ Total</td>
                     {quarters.map(q => {
                       const v = getVal(region.id, q.year, q.quarter);
                       return (
@@ -298,7 +334,8 @@ function TargetsTab({ companyId, regions, quarters, existingTargets, onSave, isS
           </table>
         </div>
         <p className="text-xs text-muted-foreground mt-3">
-          Enter targets in dollars. New Biz + Upsell auto-sums to Total.
+          Enter pipeline targets (SQLs, Opps, Wins) and revenue targets ($). New Biz + Upsell auto-sums to Total.
+          Target RAG indicators compare actuals against these targets on the Dashboard.
         </p>
       </CardContent>
     </Card>

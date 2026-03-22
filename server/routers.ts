@@ -606,13 +606,14 @@ export const appRouter = router({
         const { computeRScores } = await import("./pearsonEngine");
         const { computeRag, computeAttainment } = await import("./ragEngine");
 
-        const [regionsList, sqlTypesList, forecastsData, actualsData, qMetricsData, rScores] = await Promise.all([
+        const [regionsList, sqlTypesList, forecastsData, actualsData, qMetricsData, rScores, targetData] = await Promise.all([
           db.getRegionsByCompany(companyId).then(r => r.filter(x => x.enabled)),
           db.getSqlTypesByCompany(companyId).then(s => s.filter(x => x.enabled)),
           db.getForecastsByCompany(companyId),
           db.getActualsByCompany(companyId),
           db.getQuarterlyMetricsByCompany(companyId),
           computeRScores(companyId),
+          db.getRevenueTargetsByCompany(companyId),
         ]);
 
         const now = new Date();
@@ -635,8 +636,23 @@ export const appRouter = router({
           owr: MetricCell;
           revenueNew: number;
           revenueUpsell: number;
+          actualRevenueNew: number | null;
+          actualRevenueUpsell: number | null;
           customerCount: number;
           attachRate: number;
+          target: {
+            sqls: number;
+            opps: number;
+            wins: number;
+            revenueNew: number;
+            revenueUpsell: number;
+            revenueTotal: number;
+          } | null;
+          targetRag: {
+            sql: RagStatus | null;
+            ocr: RagStatus | null;
+            revenue: RagStatus | null;
+          } | null;
         }
         interface HierarchyRow {
           id: string;
@@ -669,13 +685,34 @@ export const appRouter = router({
 
         const OPPS_MULT = 100; // OPPORTUNITY_PRECISION_MULTIPLIER
 
+        // Target data lookup: keyed by "regionId-year-quarter"
+        const tMap = new Map<string, typeof targetData[0]>();
+        for (const t of targetData) tMap.set(`${t.regionId}-${t.year}-${t.quarter}`, t);
+
         function buildQuarters(regionIds: number[], sqlTypeIds: number[]): HierarchyQuarter[] {
           return quarters.map(q => {
             const isHist = q.year < curYear || (q.year === curYear && q.quarter < curQ);
             let mSql = 0, mOcr = 0, aSql = 0, aOcr = 0, aOwr = 0;
             let revNew = 0, revUpsell = 0, custCount = 0;
             let upsellWonSum = 0;
+            let aRevNew = 0, aRevUpsell = 0;
+            let tSqls = 0, tOpps = 0, tWins = 0, tRevNew = 0, tRevUpsell = 0, tRevTotal = 0;
+            let hasTarget = false;
+
             for (const rid of regionIds) {
+              // Sum targets per region (targets are per-region, not per-sqlType)
+              const tk = `${rid}-${q.year}-${q.quarter}`;
+              const t = tMap.get(tk);
+              if (t) {
+                hasTarget = true;
+                tSqls += t.targetSqls;
+                tOpps += t.targetOpps;
+                tWins += t.targetWins;
+                tRevNew += t.targetNewBiz;
+                tRevUpsell += t.targetUpsell;
+                tRevTotal += t.targetTotal;
+              }
+
               for (const sid of sqlTypeIds) {
                 const fk = `${rid}-${sid}-${q.year}-${q.quarter}`;
                 const f = fMap.get(fk);
@@ -687,14 +724,32 @@ export const appRouter = router({
                   revNew += f.predictedRevenueNew;
                   revUpsell += f.predictedRevenueUpsell;
                 }
-                if (a) { aSql += a.actualSqls; aOcr += a.actualOpps; aOwr += a.actualWins; }
+                if (a) {
+                  aSql += a.actualSqls;
+                  aOcr += a.actualOpps;
+                  aOwr += a.actualWins;
+                  aRevNew += a.actualRevenueNew;
+                  aRevUpsell += a.actualRevenueUpsell;
+                }
                 if (qm) {
                   custCount += qm.customerCount;
                   upsellWonSum += qm.totalUpsellWon;
                 }
               }
             }
+
             const attachRate = custCount > 0 ? Math.round((upsellWonSum / custCount) * 10000) / 10000 : 0;
+            const actualRevTotal = aRevNew + aRevUpsell;
+
+            let targetRag: HierarchyQuarter["targetRag"] = null;
+            if (hasTarget && isHist) {
+              targetRag = {
+                sql: tSqls > 0 ? computeRag(aSql, tSqls) : null,
+                ocr: tOpps > 0 ? computeRag(aOcr, tOpps) : null,
+                revenue: tRevTotal > 0 ? computeRag(actualRevTotal, tRevTotal) : null,
+              };
+            }
+
             return {
               year: q.year,
               quarter: q.quarter,
@@ -705,8 +760,12 @@ export const appRouter = router({
               owr: { model: 0, actual: isHist ? aOwr : null, rag: null },
               revenueNew: revNew,
               revenueUpsell: revUpsell,
+              actualRevenueNew: isHist ? aRevNew : null,
+              actualRevenueUpsell: isHist ? aRevUpsell : null,
               customerCount: custCount,
               attachRate,
+              target: hasTarget ? { sqls: tSqls, opps: tOpps, wins: tWins, revenueNew: tRevNew, revenueUpsell: tRevUpsell, revenueTotal: tRevTotal } : null,
+              targetRag,
             };
           });
         }
@@ -808,6 +867,9 @@ export const appRouter = router({
         regionId: z.number(),
         year: z.number().int().min(2000).max(2100),
         quarter: z.number().int().min(1).max(4),
+        targetSqls: z.number().int().min(0).default(0),
+        targetOpps: z.number().int().min(0).default(0),
+        targetWins: z.number().int().min(0).default(0),
         targetNewBiz: z.number().int().min(0),
         targetUpsell: z.number().int().min(0),
         targetTotal: z.number().int().min(0),
@@ -824,6 +886,9 @@ export const appRouter = router({
           regionId: z.number(),
           year: z.number().int().min(2000).max(2100),
           quarter: z.number().int().min(1).max(4),
+          targetSqls: z.number().int().min(0).default(0),
+          targetOpps: z.number().int().min(0).default(0),
+          targetWins: z.number().int().min(0).default(0),
           targetNewBiz: z.number().int().min(0),
           targetUpsell: z.number().int().min(0),
           targetTotal: z.number().int().min(0),

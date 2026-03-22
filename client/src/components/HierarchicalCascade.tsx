@@ -26,8 +26,23 @@ interface HierarchyQuarter {
   owr: MetricCell;
   revenueNew: number;
   revenueUpsell: number;
+  actualRevenueNew: number | null;
+  actualRevenueUpsell: number | null;
   customerCount: number;
   attachRate: number;
+  target: {
+    sqls: number;
+    opps: number;
+    wins: number;
+    revenueNew: number;
+    revenueUpsell: number;
+    revenueTotal: number;
+  } | null;
+  targetRag: {
+    sql: RagStatus | null;
+    ocr: RagStatus | null;
+    revenue: RagStatus | null;
+  } | null;
 }
 
 interface HierarchyRow {
@@ -176,28 +191,68 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
               <div className="space-y-0.5">
                 <MetricCellView cell={rq.sql} isHistorical={rq.isHistorical} />
                 <MetricCellView cell={rq.ocr} isHistorical={rq.isHistorical} />
-                {(rq.revenueNew > 0 || rq.revenueUpsell > 0) && (
+                {(rq.revenueNew > 0 || rq.revenueUpsell > 0 || (rq.actualRevenueNew != null && rq.actualRevenueNew > 0)) && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <div className="flex items-center gap-1 justify-end cursor-help">
-                          <span className="font-mono text-[10px] text-blue-700">{fmtRevenue(rq.revenueNew)}</span>
-                          {rq.revenueUpsell > 0 && (
-                            <>
-                              <span className="text-muted-foreground text-[8px]">+</span>
-                              <span className="font-mono text-[10px] text-violet-700">{fmtRevenue(rq.revenueUpsell)}</span>
-                            </>
+                        <div className="cursor-help">
+                          <div className="flex items-center gap-1 justify-end">
+                            <span className="font-mono text-[10px] text-blue-700">{fmtRevenue(rq.revenueNew)}</span>
+                            {rq.revenueUpsell > 0 && (
+                              <>
+                                <span className="text-muted-foreground text-[8px]">+</span>
+                                <span className="font-mono text-[10px] text-violet-700">{fmtRevenue(rq.revenueUpsell)}</span>
+                              </>
+                            )}
+                          </div>
+                          {rq.isHistorical && rq.actualRevenueNew != null && (rq.actualRevenueNew > 0 || (rq.actualRevenueUpsell ?? 0) > 0) && (
+                            <div className="flex items-center gap-1 justify-end">
+                              <span className="font-mono text-[9px] text-emerald-700">{fmtRevenue(rq.actualRevenueNew)}</span>
+                              {(rq.actualRevenueUpsell ?? 0) > 0 && (
+                                <>
+                                  <span className="text-muted-foreground text-[7px]">+</span>
+                                  <span className="font-mono text-[9px] text-emerald-600">{fmtRevenue(rq.actualRevenueUpsell ?? 0)}</span>
+                                </>
+                              )}
+                              {rq.targetRag?.revenue && <RagDot status={rq.targetRag.revenue} />}
+                            </div>
                           )}
                         </div>
                       </TooltipTrigger>
                       <TooltipContent side="top" className="text-xs space-y-1">
+                        <div className="font-semibold border-b pb-1 mb-1">Model Forecast</div>
                         <div>New Biz: {fmtRevenue(rq.revenueNew)}</div>
                         <div>Upsell: {fmtRevenue(rq.revenueUpsell)}</div>
-                        {rq.customerCount > 0 && <div>Customers: {rq.customerCount}</div>}
+                        {rq.isHistorical && rq.actualRevenueNew != null && (
+                          <>
+                            <div className="font-semibold border-b pb-1 mb-1 mt-2">Actuals</div>
+                            <div>New Biz: {fmtRevenue(rq.actualRevenueNew)}</div>
+                            <div>Upsell: {fmtRevenue(rq.actualRevenueUpsell ?? 0)}</div>
+                          </>
+                        )}
+                        {rq.target && (
+                          <>
+                            <div className="font-semibold border-b pb-1 mb-1 mt-2">Target</div>
+                            <div>Revenue: {fmtRevenue(rq.target.revenueTotal)}</div>
+                            {rq.target.sqls > 0 && <div>SQLs: {rq.target.sqls}</div>}
+                            {rq.target.opps > 0 && <div>Opps: {rq.target.opps}</div>}
+                          </>
+                        )}
+                        {rq.customerCount > 0 && <div className="mt-1">Customers: {rq.customerCount}</div>}
                         {rq.attachRate > 0 && <div>Attach Rate: {fmtPct(rq.attachRate)}</div>}
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
+                )}
+                {rq.target && rq.isHistorical && rq.targetRag && (
+                  <div className="flex items-center gap-1 justify-end mt-0.5">
+                    {rq.targetRag.sql && (
+                      <span className="text-[8px] text-muted-foreground flex items-center gap-0.5">S<RagDot status={rq.targetRag.sql} /></span>
+                    )}
+                    {rq.targetRag.ocr && (
+                      <span className="text-[8px] text-muted-foreground flex items-center gap-0.5">O<RagDot status={rq.targetRag.ocr} /></span>
+                    )}
+                  </div>
                 )}
               </div>
             ) : null}
@@ -222,7 +277,7 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
               <th key={`${q.year}-${q.quarter}`} className="text-center p-2 border-r text-[10px] font-semibold" style={{ minWidth: COL_W }}>
                 <div>{q.label}</div>
                 <div className="flex justify-center gap-2 text-[8px] text-muted-foreground font-normal mt-0.5">
-                  <span>M/A · Rev</span>
+                  <span>M/A · Rev · Tgt</span>
                 </div>
               </th>
             ))}

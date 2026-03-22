@@ -224,7 +224,9 @@ export const actuals = mysqlTable("actuals", {
   quarter: int("quarter").notNull(),
   actualSqls: int("actualSqls").notNull().default(0),
   actualOpps: int("actualOpps").notNull().default(0),
-  actualRevenue: int("actualRevenue").notNull().default(0), // Revenue in cents
+  actualRevenue: int("actualRevenue").notNull().default(0), // Revenue in cents (total, kept for backward compat)
+  actualRevenueNew: int("actualRevenueNew").notNull().default(0), // cents: new business closed-won revenue
+  actualRevenueUpsell: int("actualRevenueUpsell").notNull().default(0), // cents: upsell closed-won revenue
   actualWins: int("actualWins").notNull().default(0), // closed-won deal count (all types)
   actualUpsellWins: int("actualUpsellWins").notNull().default(0), // closed-won upsell deals
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -315,6 +317,9 @@ export const revenueTargets = mysqlTable("revenueTargets", {
   regionId: int("regionId").notNull(),
   year: int("year").notNull(),
   quarter: int("quarter").notNull(),
+  targetSqls: int("targetSqls").notNull().default(0),
+  targetOpps: int("targetOpps").notNull().default(0),
+  targetWins: int("targetWins").notNull().default(0),
   targetNewBiz: int("targetNewBiz").notNull().default(0), // cents
   targetUpsell: int("targetUpsell").notNull().default(0), // cents
   targetTotal: int("targetTotal").notNull().default(0), // cents (may differ from sum for manual override)

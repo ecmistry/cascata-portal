@@ -72,6 +72,47 @@ export const appRouter = router({
           },
         };
       }),
+    register: publicProcedure
+      .input(z.object({
+        name: z.string().min(1).max(100),
+        email: z.string().email(),
+        password: z.string().min(8, "Password must be at least 8 characters"),
+        companyName: z.string().min(1).max(255),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const existing = await db.getUserByEmail(input.email);
+        if (existing) {
+          throw new TRPCError({ code: "CONFLICT", message: "An account with this email already exists" });
+        }
+
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        const openId = `user-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+        const user = await db.upsertUser({
+          openId,
+          name: input.name,
+          email: input.email,
+          passwordHash,
+          loginMethod: "simple",
+          role: "user",
+          lastSignedIn: new Date(),
+        });
+
+        const userId = user?.id ?? (await db.getUserByEmail(input.email))?.id;
+        if (!userId) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create user" });
+
+        await db.createCompany({ userId, name: input.companyName });
+
+        const sessionToken = await sdk.createSessionToken(openId, {
+          name: input.name,
+          expiresInMs: SESSION_DURATION_MS,
+        });
+        const cookieOptions = getSessionCookieOptions(ctx.req);
+        ctx.res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: SESSION_DURATION_MS });
+
+        return { success: true };
+      }),
+
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);
       ctx.res.clearCookie(COOKIE_NAME, { ...cookieOptions, maxAge: -1 });
@@ -116,6 +157,28 @@ export const appRouter = router({
           throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
         }
         return company;
+      }),
+
+    saveHubspotToken: protectedProcedure
+      .input(z.object({ companyId: z.number(), token: z.string().min(1) }))
+      .mutation(async ({ ctx, input }) => {
+        const company = await db.getCompanyById(input.companyId);
+        if (!company || company.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+        }
+        await db.updateCompany(input.companyId, { hubspotToken: input.token });
+        return { success: true };
+      }),
+
+    removeHubspotToken: protectedProcedure
+      .input(z.object({ companyId: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const company = await db.getCompanyById(input.companyId);
+        if (!company || company.userId !== ctx.user.id) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Access denied" });
+        }
+        await db.updateCompany(input.companyId, { hubspotToken: null });
+        return { success: true };
       }),
   }),
 

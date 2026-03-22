@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sidebar";
 import { APP_LOGO, APP_TITLE, getLoginUrl } from "@/const";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen, ShieldCheck, TrendingUp } from "lucide-react";
+import { LayoutDashboard, LogOut, RefreshCw, BarChart3, History, ChevronDown, ChevronRight, Database, Layers, BookOpen, ShieldCheck, TrendingUp, Plug, Rocket } from "lucide-react";
 import { CSSProperties, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
@@ -143,7 +143,7 @@ function DashboardLayoutContent({
   
   // Auto-expand settings if on a settings page
   useEffect(() => {
-    if (location === "/portal-stats" || location === "/change-history" || location === "/how-it-works" || location === "/data-quality") {
+    if (location === "/portal-stats" || location === "/change-history" || location === "/how-it-works" || location === "/data-quality" || location === "/docs") {
       setSettingsExpanded(true);
     }
   }, [location]);
@@ -274,6 +274,21 @@ function DashboardLayoutContent({
                     <span className={location === "/revenue-planning" ? "font-medium" : ""}>Revenue Planning</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    isActive={location === "/integrations"}
+                    onClick={() => setLocation("/integrations")}
+                    tooltip="Integrations"
+                    className={`h-9 transition-all font-normal text-sm w-full justify-start gap-2 ${
+                      location === "/integrations" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                    }`}
+                  >
+                    <Plug
+                      className={`h-4 w-4 ${location === "/integrations" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                    />
+                    <span className={location === "/integrations" ? "font-medium" : ""}>Integrations</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </div>
 
@@ -389,9 +404,24 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
+                      isActive={location === "/docs"}
+                      onClick={() => setLocation("/docs")}
+                      tooltip="Getting Started"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/docs" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <Rocket
+                        className={`h-4 w-4 ${location === "/docs" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                      <span className={location === "/docs" ? "font-medium" : ""}>Getting Started</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
                       isActive={location === "/how-it-works"}
                       onClick={() => setLocation("/how-it-works")}
-                      tooltip="Documentation"
+                      tooltip="Technical Docs"
                       className={`h-9 transition-all font-normal text-sm ${
                         location === "/how-it-works" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
                       }`}
@@ -399,7 +429,7 @@ function DashboardLayoutContent({
                       <BookOpen
                         className={`h-4 w-4 ${location === "/how-it-works" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
                       />
-                      <span className={location === "/how-it-works" ? "font-medium" : ""}>Documentation</span>
+                      <span className={location === "/how-it-works" ? "font-medium" : ""}>Technical Docs</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>
@@ -450,9 +480,23 @@ function DashboardLayoutContent({
                   </SidebarMenuItem>
                   <SidebarMenuItem>
                     <SidebarMenuButton
+                      isActive={location === "/docs"}
+                      onClick={() => setLocation("/docs")}
+                      tooltip="Getting Started"
+                      className={`h-9 transition-all font-normal text-sm ${
+                        location === "/docs" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
+                      }`}
+                    >
+                      <Rocket
+                        className={`h-4 w-4 ${location === "/docs" ? "text-sidebar-accent-foreground" : "text-muted-foreground"}`}
+                      />
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
                       isActive={location === "/how-it-works"}
                       onClick={() => setLocation("/how-it-works")}
-                      tooltip="Documentation"
+                      tooltip="Technical Docs"
                       className={`h-9 transition-all font-normal text-sm ${
                         location === "/how-it-works" ? "bg-sidebar-accent text-sidebar-accent-foreground" : "hover:bg-accent"
                       }`}
@@ -572,13 +616,13 @@ function TopBarActions({
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setLocation("/how-it-works")}
+        onClick={() => setLocation("/docs")}
         className={`h-9 text-xs sm:text-sm ${
-          location === "/how-it-works" ? "text-foreground font-medium" : "text-muted-foreground"
+          location === "/docs" || location === "/how-it-works" ? "text-foreground font-medium" : "text-muted-foreground"
         }`}
       >
         <BookOpen className="h-4 w-4 sm:mr-1.5" />
-        <span className="hidden sm:inline">Documentation</span>
+        <span className="hidden sm:inline">Docs</span>
         <span className="sm:hidden">Docs</span>
       </Button>
       {user ? (

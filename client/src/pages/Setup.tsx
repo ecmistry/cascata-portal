@@ -288,8 +288,8 @@ export default function Setup() {
       toast.info("Calculating forecasts...");
       await calculateForecastMutation.mutateAsync({ companyId });
 
-      toast.success("Cascade model created successfully!");
-      setLocation(`/model/${companyId}`);
+      toast.success("Cascade model created! Now connect your HubSpot to sync live data.");
+      setLocation("/integrations");
     } catch (error) {
       toast.error("Failed to create model. Please try again.");
       console.error(error);

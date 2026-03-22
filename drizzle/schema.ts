@@ -37,6 +37,7 @@ export const companies = mysqlTable("companies", {
   bigqueryActualsTable: varchar("bigqueryActualsTable", { length: 255 }),
   bigqueryLastSync: timestamp("bigqueryLastSync"),
   syncConfig: text("syncConfig"), // JSON: HubSpot property mapping configuration
+  hubspotToken: varchar("hubspotToken", { length: 512 }), // Per-company HubSpot private app token
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

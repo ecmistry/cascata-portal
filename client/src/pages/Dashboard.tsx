@@ -728,9 +728,9 @@ export default function Dashboard() {
                   <p className="text-muted-foreground text-center max-w-lg mb-6 text-sm sm:text-base leading-relaxed">
                     Cascata turns your HubSpot data into quarter-by-quarter cascade forecasts, showing exactly how SQLs convert to opportunities and revenue over time.
                   </p>
-                  <Button size="lg" onClick={() => setLocation("/configure-cascata")} className="px-8">
+                  <Button size="lg" onClick={() => setLocation("/setup")} className="px-8">
                     <Plus className="w-4 h-4 mr-2" />
-                    Configure Cascata Environment
+                    Get Started
                   </Button>
                 </div>
               </CardContent>

@@ -283,6 +283,12 @@ export async function getCompanyById(id: number) {
   );
 }
 
+export async function updateCompany(companyId: number, data: Partial<InsertCompany>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(companies).set(data).where(eq(companies.id, companyId));
+}
+
 export async function updateSyncConfig(companyId: number, config: import("../drizzle/schema").SyncConfig) {
   const db = await getDb();
   if (!db) return;

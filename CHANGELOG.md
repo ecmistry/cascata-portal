@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.0] - 2026-03-11
+
+### Added
+- **Self-service registration**: New "Create Account" flow on the login page — users provide name, email, password, and company name to self-register and are auto-redirected to setup
+- **Password reset flow**: "Forgot Password?" link on the login page with a confirmation flow (email delivery to be wired in production)
+- **Per-company HubSpot token storage**: `hubspotToken` column on companies table; Integrations page now saves/removes tokens per-company with connected/disconnected badge
+- **Getting Started documentation page** (`/docs`): Step-by-step onboarding guide covering prerequisites, HubSpot Private App creation, property mapping, first sync, dashboard tour, cascade sheets, revenue planning, and FAQ
+- **Integrations page overhaul**: Functional HubSpot token management with save, remove, sync buttons, and deep link to property configuration
+- **Sidebar: Integrations link**: Quick access to the Integrations page from the main sidebar
+- **Sidebar: Getting Started & Technical Docs**: Settings section now has separate links for the getting-started guide and the technical documentation
+- **`auth.register` tRPC route**: Creates user + company in one step with session auto-login
+- **`company.saveHubspotToken` / `company.removeHubspotToken`** tRPC routes for per-company token management
+- **Schema migration `0012`**: Adds `hubspotToken` column to companies table
+
+### Changed
+- **Dashboard empty-state CTA**: Now routes to `/setup` (onboarding wizard) instead of `/configure-cascata`
+- **Setup wizard post-create redirect**: After creating a model, users are sent to `/integrations` to connect HubSpot as the next onboarding step
+- **Top bar Docs link**: Now points to `/docs` (Getting Started) instead of `/how-it-works`
+- **Login page redesigned**: Multi-view layout supporting sign-in, registration, and password reset from the same page
+
 ## [2.4.0] - 2026-03-11
 
 ### Added

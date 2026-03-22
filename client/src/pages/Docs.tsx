@@ -188,12 +188,13 @@ export default function Docs() {
                 <ol className="list-decimal pl-5 space-y-2">
                   <li>Click the <strong>Refresh</strong> button in the top navigation bar (or use the button on the Integrations page).</li>
                   <li>Cascata will fetch contacts and deals from HubSpot, calculate conversion rates, timing distributions, and generate cascade forecasts.</li>
+                  <li><strong>Regions and SQL types are auto-created</strong> — any new pod or motion value found in your data is automatically added. You don't need to configure them upfront.</li>
                   <li>A toast notification will confirm how many contacts and deals were synced.</li>
                   <li>The sidebar will populate with cascade sheet links for each motion/region combination found in your data.</li>
                 </ol>
                 <Card className="bg-blue-50 border-blue-200">
                   <CardContent className="pt-4 pb-3">
-                    <p className="text-xs text-blue-800"><strong>Tip:</strong> The first sync is a full sync and may take 30-60 seconds depending on data volume. Subsequent syncs are incremental and much faster.</p>
+                    <p className="text-xs text-blue-800"><strong>Tip:</strong> The first sync is a full sync and may take 30-60 seconds depending on data volume. Subsequent syncs are incremental and much faster. Each pod value in your HubSpot data (e.g. "NORAM East", "EMESA DACH") becomes its own region in Cascata.</p>
                   </CardContent>
                 </Card>
               </div>
@@ -225,7 +226,7 @@ export default function Docs() {
                     </Card>
                   ))}
                 </div>
-                <p>Below the cards, a <strong>hierarchical drill-down table</strong> lets you expand regions, quarters, and motions to see detailed model vs actual vs target comparisons with RAG indicators.</p>
+                <p>Below the cards, a <strong>hierarchical drill-down table</strong> follows the structure: <strong>Global → Metric → Pod → Method</strong>. The top-level rows are metrics (SQLs, Opp Coverage Ratio, Opp Win Rate, Opportunities, NB Wins, Avg ACV, New Bookings). Expanding a metric shows per-pod values, and expanding a pod shows per-method (motion) values. Each cell displays the model forecast with actuals (in green) and RAG dots for historical quarters.</p>
               </div>
             </div>
 
@@ -302,7 +303,8 @@ export default function Docs() {
                   { q: "Can multiple people access the same company data?", a: "Currently each account is linked to one company. Multi-user access to the same company is on the roadmap." },
                   { q: "What HubSpot plan do I need?", a: "Any HubSpot plan that supports Private Apps (Professional or Enterprise). The free CRM doesn't support Private Apps." },
                   { q: "Is my HubSpot data stored?", a: "Cascata stores aggregated metrics (SQL counts, conversion rates, deal economics) — not individual contact or deal records. Your token is encrypted at rest." },
-                  { q: "What's the difference between the Documentation page and this page?", a: "This page is a getting-started guide. The Documentation page (under Settings > Documentation) covers the cascade engine math and data model in technical detail." },
+                  { q: "How are pods/regions created?", a: "Regions are auto-created during sync. Every distinct value in your HubSpot pod field (e.g. 'NORAM East', 'EMESA DACH') becomes its own region in Cascata. You don't need to set them up manually." },
+                  { q: "What's the difference between the Documentation page and this page?", a: "This page is a getting-started guide. The Documentation page (under Settings > Technical Docs) covers the cascade engine math and data model in technical detail." },
                 ].map((item) => (
                   <Card key={item.q}>
                     <CardContent className="pt-4 pb-3">

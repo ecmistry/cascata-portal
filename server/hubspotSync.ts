@@ -61,24 +61,24 @@ const DEFAULT_MAPPING: MappingConfig = {
 
   contactRegionMap: {
     "noram": "NORAM",
-    "noram east": "NORAM",
-    "noram west": "NORAM",
-    "emesa": "EMESA_NORTH",
+    "noram east": "NORAM_EAST",
+    "noram west": "NORAM_WEST",
+    "emesa": "EMESA",
     "emesa north": "EMESA_NORTH",
-    "emesa dach": "EMESA_NORTH",
+    "emesa dach": "EMESA_DACH",
     "emesa south": "EMESA_SOUTH",
-    "others": "NORAM",
+    "others": "OTHERS",
   },
 
   dealRegionMap: {
     "noram": "NORAM",
-    "noram east": "NORAM",
-    "noram west": "NORAM",
-    "emesa": "EMESA_NORTH",
+    "noram east": "NORAM_EAST",
+    "noram west": "NORAM_WEST",
+    "emesa": "EMESA",
     "emesa north": "EMESA_NORTH",
-    "emesa dach": "EMESA_NORTH",
+    "emesa dach": "EMESA_DACH",
     "emesa south": "EMESA_SOUTH",
-    "others": "NORAM",
+    "others": "OTHERS",
   },
 
   sqlTypeMap: {
@@ -442,6 +442,47 @@ export async function syncFromHubSpot(
     const msg = err instanceof Error ? err.message : String(err);
     stats.errors.push(`Deal fetch failed: ${msg}`);
     console.error("[HubSpot Sync] Deal fetch failed:", msg);
+  }
+
+  // ── Auto-create regions and SQL types discovered in the data ──────
+  const DISPLAY_NAMES: Record<string, string> = {
+    "NORAM": "NORAM", "NORAM_EAST": "NORAM East", "NORAM_WEST": "NORAM West",
+    "EMESA": "EMESA", "EMESA_NORTH": "EMESA North", "EMESA_SOUTH": "EMESA South",
+    "EMESA_DACH": "EMESA DACH", "OTHERS": "Others",
+    "INBOUND": "Inbound", "OUTBOUND": "Outbound", "ILO": "ILO",
+    "EVENT": "Event", "PARTNER": "Partner",
+  };
+
+  const discoveredRegions = new Set<string>();
+  const discoveredSqlTypes = new Set<string>();
+  for (const c of contacts) {
+    const r = mapContactRegion(c.properties[cfg.contactRegionProperty], cfg);
+    const s = mapSqlType(c.properties[cfg.contactSqlTypeProperty], cfg);
+    if (r) discoveredRegions.add(r);
+    if (s) discoveredSqlTypes.add(s);
+  }
+  for (const d of deals) {
+    const r = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    const s = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    if (r) discoveredRegions.add(r);
+    if (s) discoveredSqlTypes.add(s);
+  }
+
+  for (const name of discoveredRegions) {
+    if (!regionByName.has(name)) {
+      const displayName = DISPLAY_NAMES[name] || name.replace(/_/g, " ");
+      const newId = await db.createRegion({ companyId, name, displayName, enabled: true });
+      regionByName.set(name, newId);
+      console.log(`[HubSpot Sync] Auto-created region: ${name} (${displayName})`);
+    }
+  }
+  for (const name of discoveredSqlTypes) {
+    if (!sqlTypeByName.has(name)) {
+      const displayName = DISPLAY_NAMES[name] || name.replace(/_/g, " ");
+      const newId = await db.createSqlType({ companyId, name, displayName, enabled: true });
+      sqlTypeByName.set(name, newId);
+      console.log(`[HubSpot Sync] Auto-created SQL type: ${name} (${displayName})`);
+    }
   }
 
   // ── Transform: SQL History (contacts at SQL lifecycle stage) ─────────

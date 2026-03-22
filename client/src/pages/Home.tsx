@@ -231,7 +231,7 @@ export default function Home() {
                   {
                     step: "Load",
                     color: "bg-purple-500",
-                    desc: "Upserts the raw data into the local MariaDB database, deduplicating by region, SQL type, year, and quarter.",
+                    desc: "Upserts the raw data into the local MariaDB database, deduplicating by region, SQL type, year, and quarter. New regions (pods) and SQL types (motions) discovered in the data are auto-created.",
                   },
                   {
                     step: "Transform",

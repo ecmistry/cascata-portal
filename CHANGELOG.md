@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1] - 2026-03-11
+
+### Added
+- **Auto-creation of regions and SQL types**: HubSpot sync now automatically creates new regions and SQL types discovered in contact/deal data, eliminating the need to pre-configure them manually
+- **Granular pod mapping**: Region mapping now preserves sub-pods as separate regions (NORAM East, NORAM West, EMESA DACH, Others) instead of collapsing them into parent regions
+
+### Changed
+- **Pod count expanded**: 3 regions → 7 regions (NORAM, NORAM East, NORAM West, EMESA North, EMESA South, EMESA DACH, Others) after resync with granular mapping
+- **Forecast volume increased**: 480 → 1,120 forecast records due to additional region granularity
+- **Actuals volume increased**: 155 → 243 actual records now flowing through the model
+
 ## [2.6.0] - 2026-03-11
 
 ### Changed

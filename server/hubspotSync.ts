@@ -36,6 +36,8 @@ interface MappingConfig {
   closedWonStageIds: string[];
   newDealTypeValues: string[];
   upsellDealTypeValues: string[];
+  churnDealTypeValues: string[];
+  closedLostStageIds: string[];
   regionAliases?: Record<string, string>;
   sqlTypeAliases?: Record<string, string>;
   fallbackRegion?: string;
@@ -91,7 +93,9 @@ const DEFAULT_MAPPING: MappingConfig = {
   sqlLifecycleStages: ["salesqualifiedlead"],
   closedWonStageIds: ["closedwon", "19291292", "96740205"],
   newDealTypeValues: ["newbusiness"],
-  upsellDealTypeValues: ["existingbusiness", "customerrenewal", "Fixed Add On Business", "Fixed Renewal", "Renewal Uplift"],
+  upsellDealTypeValues: ["Fixed Add On Business"],
+  churnDealTypeValues: ["customerrenewal", "Fixed Renewal"],
+  closedLostStageIds: ["closedlost"],
 };
 
 // ── HubSpot API helpers ──────────────────────────────────────────────────
@@ -335,6 +339,8 @@ export async function syncFromHubSpot(
       closedWonStageIds: storedConfig.closedWonStageIds,
       newDealTypeValues: storedConfig.newDealTypeValues,
       upsellDealTypeValues: storedConfig.upsellDealTypeValues,
+      churnDealTypeValues: (storedConfig as any).churnDealTypeValues ?? DEFAULT_MAPPING.churnDealTypeValues,
+      closedLostStageIds: (storedConfig as any).closedLostStageIds ?? DEFAULT_MAPPING.closedLostStageIds,
       regionAliases: storedConfig.regionAliases,
       sqlTypeAliases: storedConfig.sqlTypeAliases,
       fallbackRegion: storedConfig.fallbackRegion,
@@ -553,12 +559,18 @@ export async function syncFromHubSpot(
     }
   }
 
+  // Determine fallback region/sqlType for deals missing those fields
+  const fallbackRegionName = cfg.fallbackRegion ?? (regions.length > 0 ? regions[0].name : null);
+  const fallbackSqlTypeName = cfg.fallbackSqlType ?? (sqlTypes.length > 0 ? sqlTypes[0].name : null);
+
   for (const d of deals) {
     const rawDealRegion = d.properties[cfg.dealRegionProperty];
-    const region = mapDealRegion(rawDealRegion, cfg);
-    const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    let region = mapDealRegion(rawDealRegion, cfg);
+    let sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
     const qtr = toQuarter(d.properties[cfg.dealCloseDateProperty]);
     const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
+    const dealType = (d.properties.dealtype ?? "").toLowerCase();
+    const isUpsellDeal = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
 
     if (!rawDealRegion) { dq.dealsSkippedNoRegion++; }
     else if (!region) {
@@ -584,6 +596,12 @@ export async function syncFromHubSpot(
       }
     }
 
+    // Apply fallbacks for upsell deals missing region/sqlType
+    if (isUpsellDeal) {
+      if (!region && fallbackRegionName) region = fallbackRegionName;
+      if (!sqlType && fallbackSqlTypeName) sqlType = fallbackSqlTypeName;
+    }
+
     if (!region || !sqlType || !qtr) { dq.dealsSkipped++; continue; }
     if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) { dq.dealsSkipped++; continue; }
     dq.dealsUsed++;
@@ -607,9 +625,18 @@ export async function syncFromHubSpot(
   }>();
 
   for (const d of deals) {
-    const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
-    const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    let region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    let sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
     const qtr = toQuarter(d.properties[cfg.dealCloseDateProperty]);
+    const dealType = (d.properties.dealtype ?? "").toLowerCase();
+    const isUpsell = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
+
+    // For upsell deals, apply fallbacks for missing region/sqlType
+    if (isUpsell) {
+      if (!region && fallbackRegionName) region = fallbackRegionName;
+      if (!sqlType && fallbackSqlTypeName) sqlType = fallbackSqlTypeName;
+    }
+
     if (!region || !sqlType || !qtr) continue;
     if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) continue;
 
@@ -623,11 +650,8 @@ export async function syncFromHubSpot(
 
     const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
     const amountCents = Math.round(amount * 100);
-    const dealType = (d.properties.dealtype ?? "").toLowerCase();
 
-    // All deals in this loop are closed-won (fetched by stage filter)
     m.closedWon++;
-    const isUpsell = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
     if (isUpsell) {
       m.upsellAmountSum += amountCents;
       m.upsellAmountCount++;
@@ -646,6 +670,65 @@ export async function syncFromHubSpot(
     cfg.regionAliases,
     cfg.fallbackRegion,
   );
+
+  // ── Fetch churn deals (renewal-type deals that are closed-lost) ────
+  if (cfg.churnDealTypeValues.length > 0 && cfg.closedLostStageIds.length > 0) {
+    console.log("[HubSpot Sync] Fetching churn deals (renewal + closed-lost)...");
+    let churnDeals: HubSpotRecord[] = [];
+    const churnProps = ["dealtype", "dealstage", cfg.dealAmountProperty, cfg.dealCloseDateProperty, cfg.dealRegionProperty];
+    try {
+      for (const stageId of cfg.closedLostStageIds) {
+        for (const renewalType of cfg.churnDealTypeValues) {
+          const batch = await fetchAllRecords("deals", churnProps, [
+            { propertyName: "dealstage", operator: "EQ", value: stageId },
+            { propertyName: "dealtype", operator: "EQ", value: renewalType },
+          ]);
+          churnDeals.push(...batch);
+        }
+      }
+      console.log(`[HubSpot Sync] Fetched ${churnDeals.length} churn deals`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      stats.errors.push(`Churn deal fetch failed: ${msg}`);
+      console.error("[HubSpot Sync] Churn deal fetch failed:", msg);
+    }
+
+    // Aggregate churn by region × quarter
+    const churnAgg = new Map<string, number>();
+    for (const d of churnDeals) {
+      let region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+      if (!region && fallbackRegionName) region = fallbackRegionName;
+      const qtr = toQuarter(d.properties[cfg.dealCloseDateProperty]);
+      if (!region || !qtr) continue;
+      const regionId = regionByName.get(region);
+      if (!regionId) continue;
+
+      const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
+      const amountCents = Math.round(amount * 100);
+      const key = `${regionId}|${qtr.year}|${qtr.quarter}`;
+      churnAgg.set(key, (churnAgg.get(key) || 0) + amountCents);
+    }
+
+    let churnCount = 0;
+    for (const [key, churnAmount] of churnAgg) {
+      const [regionIdStr, yearStr, quarterStr] = key.split("|");
+      try {
+        await db.upsertChurnData({
+          companyId,
+          regionId: parseInt(regionIdStr),
+          year: parseInt(yearStr),
+          quarter: parseInt(quarterStr),
+          churnAmount,
+          maaArr: 0,
+          adjustment: 0,
+        });
+        churnCount++;
+      } catch (err) {
+        stats.errors.push(`Churn upsert (${key}): ${err instanceof Error ? err.message : err}`);
+      }
+    }
+    console.log(`[HubSpot Sync] Upserted ${churnCount} churn records from ${churnDeals.length} lost renewals`);
+  }
 
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -785,16 +868,22 @@ export async function syncFromHubSpot(
 
   // Closed-won counts from deals (for win rate calculation)
   for (const d of deals) {
-    const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
-    const sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    let region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    let sqlType = mapSqlType(d.properties[cfg.dealSqlTypeProperty], cfg);
+    const dealType = (d.properties.dealtype ?? "").toLowerCase();
+    const isUpsell = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
+
+    if (isUpsell) {
+      if (!region && fallbackRegionName) region = fallbackRegionName;
+      if (!sqlType && fallbackSqlTypeName) sqlType = fallbackSqlTypeName;
+    }
     if (!region || !sqlType) continue;
     if (!regionByName.has(region) || !sqlTypeByName.has(sqlType)) continue;
 
     const crKey = `${region}|${sqlType}`;
     const existing = crData.get(crKey) || { sqls: 0, opps: 0, wonNew: 0, wonUpsell: 0 };
 
-    const dealType = d.properties.dealtype ?? "";
-    if (cfg.upsellDealTypeValues.includes(dealType)) {
+    if (isUpsell) {
       existing.wonUpsell += 1;
     } else {
       existing.wonNew += 1;
@@ -836,16 +925,18 @@ export async function syncFromHubSpot(
   const acvData = new Map<string, { newTotal: number; newCount: number; upsellTotal: number; upsellCount: number }>();
 
   for (const d of deals) {
-    const region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    let region = mapDealRegion(d.properties[cfg.dealRegionProperty], cfg);
+    const dealType = (d.properties.dealtype ?? "").toLowerCase();
+    const isUpsell = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
+    if (!region && isUpsell && fallbackRegionName) region = fallbackRegionName;
     if (!region || !regionByName.has(region)) continue;
 
     const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
     if (amount <= 0) continue;
 
     const existing = acvData.get(region) || { newTotal: 0, newCount: 0, upsellTotal: 0, upsellCount: 0 };
-    const dealType = d.properties.dealtype ?? "";
 
-    if (cfg.upsellDealTypeValues.includes(dealType)) {
+    if (isUpsell) {
       existing.upsellTotal += amount;
       existing.upsellCount += 1;
     } else {

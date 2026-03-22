@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1] - 2026-03-11
+
+### Added
+- **Automatic churn from HubSpot**: Churn data is now sourced directly from HubSpot by fetching renewal-type deals (`customerrenewal`, `Fixed Renewal`) with closed-lost stage. 86 churn deals -> 21 quarterly churn records auto-populated
+- **Resync utility**: `scripts/resync.ts` for triggering HubSpot sync outside the server process
+
+### Changed
+- **Upsell deal classification narrowed**: `upsellDealTypeValues` changed from `["existingbusiness", "customerrenewal", ...]` to `["Fixed Add On Business"]` only — renewals are now correctly excluded from upsell revenue
+- **Upsell deals no longer require SQL type**: Add-on deals missing `type_of_sql_associated_to_deal` now fall back to the first available SQL type instead of being silently dropped (69 add-on deals now flow through)
+- **Fallback region for missing deal_pod**: Upsell and churn deals without `deal_pod` are assigned to a fallback region instead of being skipped
+- **Company customer detection**: HubSpot Company object `type = CUSTOMER` now correctly identifies 365 customer companies (uppercase match)
+- **Forecast range extended**: Forecasts now dynamically cover at least 2 years into the future from the current date, fixing missing 2026+ data
+- **Current quarter included in projections**: `isHistorical` and `computeSixQuarterAverage` now include the current quarter's data, enabling upsell metrics to project forward immediately
+- **Customer count uses latest snapshot**: Future quarter projections use the latest known customer count (stock measure) rather than averaging it over the 6Q window
+- **6Q average minimum threshold lowered**: Reduced from 4 quarters to 1 quarter minimum, allowing newly-tracked metrics (like upsells) to project forward without a multi-quarter warm-up period
+
+### Fixed
+- Upsell revenue forecast was $0 across all quarters due to four compounding issues: wrong customer type value (case sensitivity), SQL type requirement on add-on deals, current quarter excluded from historical data, and 6Q average requiring 4+ quarters of data
+
 ## [2.3.0] - 2026-03-11
 
 ### Added

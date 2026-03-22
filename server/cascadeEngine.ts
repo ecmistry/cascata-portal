@@ -74,7 +74,7 @@ function computeSixQuarterAverage(
     const [yStr, qStr] = key.split("-");
     const y = Number(yStr);
     const q = Number(qStr);
-    if (y < currentYear || (y === currentYear && q < currentQuarter)) {
+    if (y < currentYear || (y === currentYear && q <= currentQuarter)) {
       completed.push({ key, val });
     }
   }
@@ -82,13 +82,13 @@ function computeSixQuarterAverage(
   completed.sort((a, b) => a.key.localeCompare(b.key));
   const window = completed.slice(-windowSize);
 
-  if (window.length < 4) return null;
+  if (window.length === 0) return null;
 
   return window.reduce((sum, item) => sum + item.val, 0) / window.length;
 }
 
 function isHistorical(y: number, q: number, curY: number, curQ: number): boolean {
-  return y < curY || (y === curY && q < curQ);
+  return y < curY || (y === curY && q <= curQ);
 }
 
 /**
@@ -211,7 +211,12 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
       const sixQAcvNew = computeSixQuarterAverage(perQAcvNew, currentYear, currentQuarter, windowSize);
       const sixQAcvUpsell = computeSixQuarterAverage(perQAcvUpsell, currentYear, currentQuarter, windowSize);
       const sixQAttachRate = computeSixQuarterAverage(perQAttachRate, currentYear, currentQuarter, windowSize);
-      const sixQCustomerCount = computeSixQuarterAverage(perQCustomerCount, currentYear, currentQuarter, windowSize);
+
+      // Customer count is a stock/snapshot, not a flow — use latest known value, not average
+      let latestCustomerCount = 0;
+      for (const [, count] of perQCustomerCount) {
+        if (count > latestCustomerCount) latestCustomerCount = count;
+      }
 
       // Overall fallback conversion rate (all-time average)
       let totalActualSqls = 0;
@@ -325,7 +330,7 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
           acvNew = sixQAcvNew ?? defaultAcvNew;
           acvUpsell = sixQAcvUpsell ?? defaultAcvUpsell;
           attachRate = sixQAttachRate !== null ? sixQAttachRate / 10000 : 0;
-          customerCount = sixQCustomerCount !== null ? Math.round(sixQCustomerCount) : 0;
+          customerCount = latestCustomerCount;
         }
 
         // New business revenue: pipeline-driven (SQL → Opp → Win cascade)
@@ -465,11 +470,17 @@ export async function runCascadeForecast(
     }
   }
 
+  // Ensure forecast covers at least 2 years into the future from now
+  const currentYear = new Date().getFullYear();
+  const minEndYear = currentYear + 2;
+  const yearsNeeded = minEndYear - resolvedStartYear + 1;
+  const resolvedForecastYears = Math.max(forecastYears, yearsNeeded);
+
   const input: CascadeInput = {
     companyId,
     startYear: resolvedStartYear,
     startQuarter: resolvedStartQuarter,
-    forecastYears,
+    forecastYears: resolvedForecastYears,
   };
 
   const results = await calculateCascade(input);

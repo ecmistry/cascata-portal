@@ -116,7 +116,12 @@ export async function computeRScores(
 
     const validOcr = isFinite(ocrR) ? ocrR : 0;
     const validOwr = isFinite(owrR) ? owrR : 0;
-    const overall = (validOcr + validOwr) / 2;
+    // OWR model predictions aren't stored directly, so only include OWR
+    // in the overall when we actually have model wins data
+    const hasModelWins = modelWinsArr.some(v => v > 0);
+    const overall = hasModelWins
+      ? (validOcr + validOwr) / 2
+      : validOcr;
 
     perRegion.push({
       metricType: "ocr",

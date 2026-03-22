@@ -704,7 +704,7 @@ export const appRouter = router({
         const { computeRScores } = await import("./pearsonEngine");
         const { computeRag, computeAttainment } = await import("./ragEngine");
 
-        const [regionsList, sqlTypesList, forecastsData, actualsData, qMetricsData, rScores, targetData] = await Promise.all([
+        const [regionsList, sqlTypesList, forecastsData, actualsData, qMetricsData, rScores, targetData, convRates, dealEcon] = await Promise.all([
           db.getRegionsByCompany(companyId).then(r => r.filter(x => x.enabled)),
           db.getSqlTypesByCompany(companyId).then(s => s.filter(x => x.enabled)),
           db.getForecastsByCompany(companyId),
@@ -712,6 +712,8 @@ export const appRouter = router({
           db.getQuarterlyMetricsByCompany(companyId),
           computeRScores(companyId),
           db.getRevenueTargetsByCompany(companyId),
+          db.getConversionRatesByCompany(companyId),
+          db.getDealEconomicsByCompany(companyId),
         ]);
 
         const now = new Date();
@@ -732,12 +734,15 @@ export const appRouter = router({
           sql: MetricCell;
           ocr: MetricCell;
           owr: MetricCell;
+          oppCount: MetricCell;
+          nbWins: MetricCell;
           revenueNew: number;
           revenueUpsell: number;
           actualRevenueNew: number | null;
           actualRevenueUpsell: number | null;
           customerCount: number;
           attachRate: number;
+          avgAcvNew: number;
           target: {
             sqls: number;
             opps: number;
@@ -787,6 +792,10 @@ export const appRouter = router({
         const tMap = new Map<string, typeof targetData[0]>();
         for (const t of targetData) tMap.set(`${t.regionId}-${t.year}-${t.quarter}`, t);
 
+        // Deal economics lookup: keyed by regionId
+        const deMap = new Map<number, typeof dealEcon[0]>();
+        for (const de of dealEcon) deMap.set(de.regionId, de);
+
         function buildQuarters(regionIds: number[], sqlTypeIds: number[]): HierarchyQuarter[] {
           return quarters.map(q => {
             const isHist = q.year < curYear || (q.year === curYear && q.quarter < curQ);
@@ -794,11 +803,11 @@ export const appRouter = router({
             let revNew = 0, revUpsell = 0, custCount = 0;
             let upsellWonSum = 0;
             let aRevNew = 0, aRevUpsell = 0;
+            let aUpsellWins = 0;
             let tSqls = 0, tOpps = 0, tWins = 0, tRevNew = 0, tRevUpsell = 0, tRevTotal = 0;
             let hasTarget = false;
 
             for (const rid of regionIds) {
-              // Sum targets per region (targets are per-region, not per-sqlType)
               const tk = `${rid}-${q.year}-${q.quarter}`;
               const t = tMap.get(tk);
               if (t) {
@@ -828,6 +837,7 @@ export const appRouter = router({
                   aOwr += a.actualWins;
                   aRevNew += a.actualRevenueNew;
                   aRevUpsell += a.actualRevenueUpsell;
+                  aUpsellWins += a.actualUpsellWins;
                 }
                 if (qm) {
                   custCount += qm.customerCount;
@@ -838,6 +848,19 @@ export const appRouter = router({
 
             const attachRate = custCount > 0 ? Math.round((upsellWonSum / custCount) * 10000) / 10000 : 0;
             const actualRevTotal = aRevNew + aRevUpsell;
+
+            // Derive model-predicted wins and opps from revenue / ACV when available
+            let avgAcvForRegions = 0;
+            let acvCount = 0;
+            for (const rid of regionIds) {
+              const de = deMap.get(rid);
+              if (de && de.acvNew > 0) {
+                avgAcvForRegions += de.acvNew;
+                acvCount++;
+              }
+            }
+            const avgAcv = acvCount > 0 ? Math.round(avgAcvForRegions / acvCount) : 0;
+            const modelWins = avgAcv > 0 ? Math.round(revNew / avgAcv) : 0;
 
             let targetRag: HierarchyQuarter["targetRag"] = null;
             if (hasTarget && isHist) {
@@ -856,12 +879,15 @@ export const appRouter = router({
               sql: { model: mSql, actual: isHist ? aSql : null, rag: isHist ? computeRag(aSql, mSql) : null },
               ocr: { model: mOcr, actual: isHist ? aOcr : null, rag: isHist ? computeRag(aOcr, mOcr) : null },
               owr: { model: 0, actual: isHist ? aOwr : null, rag: null },
+              oppCount: { model: mOcr, actual: isHist ? aOcr : null, rag: isHist ? computeRag(aOcr, mOcr) : null },
+              nbWins: { model: modelWins, actual: isHist ? aOwr : null, rag: isHist && modelWins > 0 ? computeRag(aOwr, modelWins) : null },
               revenueNew: revNew,
               revenueUpsell: revUpsell,
               actualRevenueNew: isHist ? aRevNew : null,
               actualRevenueUpsell: isHist ? aRevUpsell : null,
               customerCount: custCount,
               attachRate,
+              avgAcvNew: avgAcv,
               target: hasTarget ? { sqls: tSqls, opps: tOpps, wins: tWins, revenueNew: tRevNew, revenueUpsell: tRevUpsell, revenueTotal: tRevTotal } : null,
               targetRag,
             };

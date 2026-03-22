@@ -615,7 +615,7 @@ export default function Dashboard() {
                     Hierarchical Performance
                   </CardTitle>
                   <CardDescription className="text-sm">
-                    Global &rarr; Region &rarr; Motion drill-down with Model vs Actual and RAG indicators
+                    Global &rarr; Metric &rarr; Pod &rarr; Method drill-down with Model vs Actual
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">

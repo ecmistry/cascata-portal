@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.0] - 2026-03-11
+
+### Changed
+- **Hierarchical cascade redesigned**: New drill-down structure: Global → Metric (SQLs, Opp Coverage Ratio, Opp Win Rate, Opportunities, NB Wins, Avg ACV, New Bookings) → Pod → Method. Each metric is its own expandable row showing per-quarter values, replacing the old compact multi-metric cell layout
+- **R-score overall calculation fixed**: Overall R-score no longer averages in OWR when the model doesn't produce explicit win predictions (OWR model data is always 0), so overall now correctly reflects OCR accuracy (~0.92 instead of ~0.46)
+- **Additional metrics in hierarchy data**: Server now returns `oppCount`, `nbWins`, `avgAcvNew` per quarter for each hierarchy level, sourced from forecasts, actuals, and deal economics tables
+
 ## [2.5.0] - 2026-03-11
 
 ### Added

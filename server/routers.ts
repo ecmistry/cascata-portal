@@ -894,6 +894,9 @@ export const appRouter = router({
           });
         }
 
+        // Sort regions alphabetically by display name
+        regionsList.sort((a, b) => (a.displayName || a.name).localeCompare(b.displayName || b.name));
+
         // Level 3: Motion rows
         const motions: HierarchyRow[][] = [];
         for (const region of regionsList) {

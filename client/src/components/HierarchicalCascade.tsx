@@ -61,13 +61,13 @@ interface Props {
 type MetricKey = "sql" | "ocr" | "owr" | "oppCount" | "nbWins" | "avgAcv" | "newBookings";
 
 const METRICS: { key: MetricKey; label: string }[] = [
-  { key: "sql", label: "SQLs" },
-  { key: "ocr", label: "Opp Coverage Ratio" },
-  { key: "owr", label: "Opp Win Rate" },
-  { key: "oppCount", label: "Opportunities" },
-  { key: "nbWins", label: "NB Wins" },
+  { key: "sql", label: "SQL" },
+  { key: "ocr", label: "Opportunity Creation Rate (OCR)" },
+  { key: "owr", label: "Opportunity Worked Rate (OWR)" },
+  { key: "oppCount", label: "Opportunity Cover Ratio" },
+  { key: "nbWins", label: "New Business Opps Won" },
   { key: "avgAcv", label: "Avg ACV" },
-  { key: "newBookings", label: "New Bookings" },
+  { key: "newBookings", label: "New Business Bookings" },
 ];
 
 function RagDot({ status }: { status: RagStatus | null }) {
@@ -189,15 +189,17 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
     const rag = getMetricRag(q, metric);
 
     return (
-      <td className={`border-r p-1.5 text-right ${q.isHistorical ? "" : "bg-blue-50/30"}`} style={{ minWidth: COL_W }}>
-        <div className="flex items-center justify-end gap-1">
-          <span className={`font-mono text-[11px] ${isGlobalRow ? "font-semibold" : ""}`}>{modelVal.display}</span>
-        </div>
-        {q.isHistorical && actualVal && actualVal.raw > 0 && (
-          <div className="flex items-center justify-end gap-0.5 mt-0.5">
-            <span className="font-mono text-[10px] text-emerald-700">{actualVal.display}</span>
-            <RagDot status={rag} />
+      <td className={`border-r p-1.5 text-center ${q.isHistorical ? "" : "bg-blue-50/30"}`} style={{ minWidth: COL_W }}>
+        {q.isHistorical && actualVal && actualVal.raw > 0 ? (
+          <div className="flex items-center justify-center gap-0">
+            <span className={`font-mono text-[13px] ${isGlobalRow ? "font-semibold" : ""}`}>{modelVal.display}</span>
+            <span className="text-muted-foreground text-[11px] mx-0.5">/</span>
+            <span className={`font-mono text-[13px] font-medium ${
+              rag === "green" ? "text-emerald-600" : rag === "amber" ? "text-amber-600" : rag === "red" ? "text-red-600" : ""
+            }`}>{actualVal.display}</span>
           </div>
+        ) : (
+          <span className={`font-mono text-[13px] ${isGlobalRow ? "font-semibold" : ""}`}>{modelVal.display}</span>
         )}
       </td>
     );
@@ -218,7 +220,7 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
 
     return (
       <tr key={`${row.id}-${metric}`} className={`border-b hover:bg-muted/20 ${bgClass}`}>
-        <td className={`p-1.5 border-r sticky left-0 z-10 ${bgClass || "bg-white"}`} style={{ paddingLeft: indent * 20 + 8 }}>
+        <td className={`p-1.5 border-r sticky left-0 z-10 ${bgClass || "bg-white"}`} style={{ paddingLeft: indent * 20 + 8, boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
           <div className="flex items-center gap-1.5">
             {isExpandable ? (
               <button onClick={onToggle} className="p-0.5 rounded hover:bg-muted">
@@ -242,7 +244,7 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
       <table className="w-full text-xs border-collapse">
         <thead>
           <tr className="bg-slate-100 border-b-2">
-            <th className="text-left p-2 border-r sticky left-0 z-10 bg-slate-100 min-w-[200px]">
+            <th className="text-left p-2 border-r sticky left-0 z-10 bg-slate-100 min-w-[200px]" style={{ boxShadow: "2px 0 4px -2px rgba(0,0,0,0.08)" }}>
               <div className="flex items-center gap-1.5">
                 <TrendingUp className="h-3.5 w-3.5 text-slate-500" />
                 <span className="text-[11px] font-semibold">Cascade Hierarchy</span>

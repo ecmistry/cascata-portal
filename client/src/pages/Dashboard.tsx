@@ -270,7 +270,7 @@ export default function Dashboard() {
           <div className="mb-4">
             <h1 className="text-xl sm:text-2xl font-semibold text-foreground mb-1">Dashboard</h1>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              Model accuracy, performance attainment, and hierarchical cascade view
+              Model accuracy, performance attainment, and hierarchical cascade view with upsell tracking
             </p>
           </div>
 

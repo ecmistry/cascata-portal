@@ -72,6 +72,7 @@ export interface SyncConfig {
   defaultConversionRate?: number;    // basis points, e.g. 5000 = 50%
   companyCustomerField?: string;     // HubSpot Company property identifying customers
   companyCustomerValues?: string[];  // Values meaning 'is customer' e.g. ['customer']
+  companyRegionProperty?: string;    // HubSpot Company property that maps to region
   rollingWindowQuarters?: number;    // default 6 (quarters for one-time average)
 }
 
@@ -224,7 +225,8 @@ export const actuals = mysqlTable("actuals", {
   actualSqls: int("actualSqls").notNull().default(0),
   actualOpps: int("actualOpps").notNull().default(0),
   actualRevenue: int("actualRevenue").notNull().default(0), // Revenue in cents
-  actualWins: int("actualWins").notNull().default(0), // closed-won deal count
+  actualWins: int("actualWins").notNull().default(0), // closed-won deal count (all types)
+  actualUpsellWins: int("actualUpsellWins").notNull().default(0), // closed-won upsell deals
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({
@@ -271,7 +273,9 @@ export const quarterlyMetrics = mysqlTable("quarterlyMetrics", {
   avgAcvUpsell: int("avgAcvUpsell").notNull().default(0), // cents
   totalClosedWon: int("totalClosedWon").notNull().default(0),
   totalClosedLost: int("totalClosedLost").notNull().default(0),
-  customerCount: int("customerCount").notNull().default(0), // Phase 2
+  totalUpsellWon: int("totalUpsellWon").notNull().default(0),
+  upsellAttachRate: int("upsellAttachRate").notNull().default(0), // basis points: upsellWon / customerCount
+  customerCount: int("customerCount").notNull().default(0),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 }, (table) => ({

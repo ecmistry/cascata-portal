@@ -39,6 +39,42 @@ function RScoreCard({ score, label }: { score: number | undefined; label: string
   );
 }
 
+function UpsellSummaryCard({ data }: { data: any }) {
+  if (!data) return null;
+
+  const allQuarters = data.global?.quarters ?? [];
+  const futureQ = allQuarters.filter((q: any) => !q.isHistorical);
+  const nextQ = futureQ.length > 0 ? futureQ[0] : null;
+
+  const totalFutureUpsell = futureQ.reduce((sum: number, q: any) => sum + (q.revenueUpsell ?? 0), 0);
+  const totalFutureNew = futureQ.reduce((sum: number, q: any) => sum + (q.revenueNew ?? 0), 0);
+  const pct = (totalFutureNew + totalFutureUpsell) > 0
+    ? Math.round((totalFutureUpsell / (totalFutureNew + totalFutureUpsell)) * 100)
+    : 0;
+
+  const fmtDollars = (cents: number) => {
+    const d = cents / 100;
+    if (d >= 1_000_000) return `$${(d / 1_000_000).toFixed(1)}M`;
+    if (d >= 1_000) return `$${(d / 1_000).toFixed(0)}K`;
+    return `$${d.toFixed(0)}`;
+  };
+
+  return (
+    <Card className="border-2 border-violet-200">
+      <CardContent className="pt-4 pb-3 px-4">
+        <p className="text-xs text-muted-foreground mb-1">Upsell Forecast</p>
+        <div className="text-2xl font-bold text-violet-700">
+          {totalFutureUpsell > 0 ? fmtDollars(totalFutureUpsell) : "N/A"}
+        </div>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          {pct > 0 ? `${pct}% of total forecast` : "No upsell data"}
+          {nextQ?.customerCount > 0 && ` · ${nextQ.customerCount} customers`}
+        </p>
+      </CardContent>
+    </Card>
+  );
+}
+
 function RagSummaryCard({ data }: { data: any }) {
   if (!data) return null;
 
@@ -240,12 +276,13 @@ export default function Dashboard() {
 
           {companies.length > 0 && (
             <>
-              {/* R-Score + RAG Headline Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+              {/* R-Score + RAG + Upsell Headline Cards */}
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
                 <RScoreCard score={rScores?.global?.overall} label="Overall R-Score" />
                 <RScoreCard score={rScores?.global?.ocr} label="Opp Coverage R" />
                 <RScoreCard score={rScores?.global?.owr} label="Opp Win Rate R" />
                 <RagSummaryCard data={hierarchicalData} />
+                <UpsellSummaryCard data={hierarchicalData} />
               </div>
 
               {/* Hierarchical Cascade View (primary) */}

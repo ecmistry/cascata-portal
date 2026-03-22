@@ -11,6 +11,7 @@
 import axios, { type AxiosInstance } from "axios";
 import * as db from "./db";
 import { runCascadeForecast } from "./cascadeEngine";
+import type { SyncConfig } from "../drizzle/schema";
 
 const HUBSPOT_API_BASE = "https://api.hubapi.com";
 const PAGE_LIMIT = 100;
@@ -162,6 +163,59 @@ async function fetchAllRecords(
   }
 
   return all;
+}
+
+/**
+ * Fetch HubSpot Companies that are current customers,
+ * mapped to regions for per-quarter customer count.
+ */
+async function fetchCustomerCompanies(
+  syncCfg: SyncConfig | null,
+  regionMap: Record<string, string>,
+  regionAliases?: Record<string, string>,
+  fallbackRegion?: string,
+): Promise<Map<string, number>> {
+  const regionCounts = new Map<string, number>();
+
+  if (!syncCfg?.companyCustomerField || !syncCfg.companyCustomerValues?.length) {
+    console.log("[HubSpot Sync] Company customer field not configured, skipping company fetch");
+    return regionCounts;
+  }
+
+  const regionProp = syncCfg.companyRegionProperty || "industry";
+  const properties = [syncCfg.companyCustomerField, regionProp, "createdate"];
+
+  console.log(`[HubSpot Sync] Fetching companies where ${syncCfg.companyCustomerField} in [${syncCfg.companyCustomerValues.join(", ")}]...`);
+
+  let allCompanies: HubSpotRecord[] = [];
+  for (const val of syncCfg.companyCustomerValues) {
+    try {
+      const batch = await fetchAllRecords("companies", properties, [
+        { propertyName: syncCfg.companyCustomerField, operator: "EQ", value: val },
+      ]);
+      allCompanies.push(...batch);
+    } catch (err) {
+      console.error(`[HubSpot Sync] Company fetch for value "${val}" failed:`, err instanceof Error ? err.message : err);
+    }
+  }
+
+  console.log(`[HubSpot Sync] Fetched ${allCompanies.length} customer companies`);
+
+  for (const company of allCompanies) {
+    const rawRegion = company.properties[regionProp];
+    if (!rawRegion) continue;
+
+    const key = rawRegion.trim().toLowerCase();
+    let region: string | null = null;
+    if (regionAliases?.[key]) region = regionAliases[key];
+    else region = regionMap[key] ?? fallbackRegion ?? null;
+
+    if (region) {
+      regionCounts.set(region, (regionCounts.get(region) || 0) + 1);
+    }
+  }
+
+  return regionCounts;
 }
 
 // ── Mapping helpers ─────────────────────────────────────────────────────
@@ -549,6 +603,7 @@ export async function syncFromHubSpot(
     wonAmountCount: number;
     upsellAmountSum: number;
     upsellAmountCount: number;
+    upsellWon: number;
   }>();
 
   for (const d of deals) {
@@ -563,6 +618,7 @@ export async function syncFromHubSpot(
       closedWon: 0, closedLost: 0,
       wonAmountSum: 0, wonAmountCount: 0,
       upsellAmountSum: 0, upsellAmountCount: 0,
+      upsellWon: 0,
     };
 
     const amount = parseFloat(d.properties[cfg.dealAmountProperty] ?? "0") || 0;
@@ -571,15 +627,29 @@ export async function syncFromHubSpot(
 
     // All deals in this loop are closed-won (fetched by stage filter)
     m.closedWon++;
-    if (cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()))) {
+    const isUpsell = cfg.upsellDealTypeValues.some(v => dealType.includes(v.toLowerCase()));
+    if (isUpsell) {
       m.upsellAmountSum += amountCents;
       m.upsellAmountCount++;
+      m.upsellWon++;
     } else {
       m.wonAmountSum += amountCents;
       m.wonAmountCount++;
     }
     qMetrics.set(key, m);
   }
+
+  // ── Fetch customer companies for customer count ───────────────────
+  const customerCountsByRegion = await fetchCustomerCompanies(
+    storedConfig,
+    cfg.contactRegionMap,
+    cfg.regionAliases,
+    cfg.fallbackRegion,
+  );
+
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const currentQuarter = Math.ceil((now.getMonth() + 1) / 3);
 
   // Write quarterly metrics
   console.log("[HubSpot Sync] Writing quarterly metrics...");
@@ -602,19 +672,32 @@ export async function syncFromHubSpot(
       ? Math.round(m.upsellAmountSum / m.upsellAmountCount)
       : 0;
 
+    // Customer count assigned to current quarter's metrics for each region
+    const yr = parseInt(yearStr);
+    const qr = parseInt(quarterStr);
+    const custCount = (yr === currentYear && qr === currentQuarter)
+      ? (customerCountsByRegion.get(regionName) ?? 0)
+      : 0;
+
+    const attachRate = custCount > 0
+      ? Math.round((m.upsellWon / custCount) * 10000)
+      : 0;
+
     try {
       await db.upsertQuarterlyMetric({
         companyId,
         regionId,
         sqlTypeId,
-        year: parseInt(yearStr),
-        quarter: parseInt(quarterStr),
+        year: yr,
+        quarter: qr,
         pipelineCoverRatio: ratio,
         avgAcvNew,
         avgAcvUpsell,
         totalClosedWon: m.closedWon,
         totalClosedLost: m.closedLost,
-        customerCount: 0,
+        totalUpsellWon: m.upsellWon,
+        upsellAttachRate: attachRate,
+        customerCount: custCount,
       });
       qmCount++;
     } catch (err) {
@@ -624,30 +707,30 @@ export async function syncFromHubSpot(
   console.log(`[HubSpot Sync] Upserted ${qmCount} quarterly metric records`);
 
   // Build unified actuals from contacts (SQLs + Opps by SQL date), deals (revenue + wins by close date)
-  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number; wins: number }>();
+  const unifiedActuals = new Map<string, { sqls: number; opps: number; revenue: number; wins: number; upsellWins: number }>();
 
   for (const [key, volume] of sqlVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
     existing.sqls = volume;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, count] of oppVolumes) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
     existing.opps = count;
     unifiedActuals.set(key, existing);
   }
 
   for (const [key, act] of actualRevenues) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
     existing.revenue += act.revenue;
     unifiedActuals.set(key, existing);
   }
 
-  // Add actualWins from deal metrics
   for (const [key, m] of qMetrics) {
-    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0 };
+    const existing = unifiedActuals.get(key) || { sqls: 0, opps: 0, revenue: 0, wins: 0, upsellWins: 0 };
     existing.wins = m.closedWon;
+    existing.upsellWins = m.upsellWon;
     unifiedActuals.set(key, existing);
   }
 
@@ -664,6 +747,7 @@ export async function syncFromHubSpot(
         actualOpps: act.opps,
         actualRevenue: act.revenue,
         actualWins: act.wins,
+        actualUpsellWins: act.upsellWins,
       });
       stats.actualsUpserted++;
     } catch (err) {

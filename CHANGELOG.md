@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0] - 2026-03-11
+
+### Added
+- **HubSpot Company object integration**: New `fetchCustomerCompanies()` in `hubspotSync.ts` fetches Companies from HubSpot using configurable `companyCustomerField` and `companyCustomerValues` to identify active customers, mapped to regions via `companyRegionProperty`
+- **Customer count tracking**: Customer counts per region are written to `quarterlyMetrics.customerCount` during sync, enabling the upsell attach rate calculation
+- **Upsell cascade engine**: New formula `attach_rate × customer_count × avg_upsell_ACV` for upsell bookings, computed separately from the pipeline-driven new business cascade. Attach rate and customer count use 6Q one-time averages for future quarters
+- **Upsell-specific win tracking**: Deals are now classified as upsell vs new business at the per-quarter level, with separate `totalUpsellWon` in `quarterlyMetrics` and `actualUpsellWins` in `actuals`
+- **Upsell attach rate**: `quarterlyMetrics.upsellAttachRate` (basis points) stores `upsellWon / customerCount` per quarter/region/motion
+- **Revenue breakdown in hierarchy**: Hierarchical cascade view now shows New Biz + Upsell revenue per quarter with tooltips showing customer count and attach rate
+- **Upsell forecast card**: Dashboard headline row includes a new "Upsell Forecast" card showing total future upsell bookings and percentage of total forecast
+- **Company Object configuration UI**: New "Company Object (Upsell & Customer Tracking)" section on the Configure page with fields for `companyCustomerField`, `companyCustomerValues`, and `companyRegionProperty`
+
+### Changed
+- **Cascade engine**: Revenue split is now data-driven — new business revenue comes from the pipeline cascade (SQL→Opp→Win), upsell revenue from the attach rate formula. Replaces the previous fixed-proportion split
+- **HubSpot sync**: Per-quarter deal metrics now track `upsellWon` separately; `unifiedActuals` includes `upsellWins`
+- **Forecast storage**: `predictedRevenueNew` and `predictedRevenueUpsell` in the `forecasts` table are now populated from the separate cascade calculations
+- **Database schema**: Added `totalUpsellWon`, `upsellAttachRate` to `quarterlyMetrics`; added `actualUpsellWins` to `actuals` via migration `0009_phase2_upsell_schema.sql`
+- **tRPC routers**: `saveSyncConfig` and `getSyncConfig` now support Company object fields; `hierarchicalData` returns revenue, customer count, and attach rate per quarter
+- **Dashboard layout**: Headline cards expanded to a 5-column grid including the new Upsell Forecast card
+
 ## [2.0.0] - 2026-03-22
 
 ### Added

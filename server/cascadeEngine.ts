@@ -32,7 +32,9 @@ export interface CascadeResult {
   quarter: number;
   sqlVolume: number;
   opportunities: number;
-  revenue: number; // in cents
+  revenue: number; // in cents (total = new + upsell)
+  revenueNew: number; // in cents
+  revenueUpsell: number; // in cents (attach_rate x customer_count x avg_upsell_ACV)
 }
 
 /**
@@ -192,10 +194,14 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
       // Build per-quarter ACV map for 6Q average
       const perQAcvNew = new Map<string, number>();
       const perQAcvUpsell = new Map<string, number>();
+      const perQAttachRate = new Map<string, number>();
+      const perQCustomerCount = new Map<string, number>();
       for (const qm of quarterlyMetricsData) {
         if (qm.regionId === region.id && qm.sqlTypeId === sqlType.id) {
           if (qm.avgAcvNew > 0) perQAcvNew.set(`${qm.year}-${qm.quarter}`, qm.avgAcvNew);
           if (qm.avgAcvUpsell > 0) perQAcvUpsell.set(`${qm.year}-${qm.quarter}`, qm.avgAcvUpsell);
+          if (qm.upsellAttachRate > 0) perQAttachRate.set(`${qm.year}-${qm.quarter}`, qm.upsellAttachRate);
+          if (qm.customerCount > 0) perQCustomerCount.set(`${qm.year}-${qm.quarter}`, qm.customerCount);
         }
       }
 
@@ -204,6 +210,8 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
       const sixQWinRate = computeSixQuarterAverage(perQWinRates, currentYear, currentQuarter, windowSize);
       const sixQAcvNew = computeSixQuarterAverage(perQAcvNew, currentYear, currentQuarter, windowSize);
       const sixQAcvUpsell = computeSixQuarterAverage(perQAcvUpsell, currentYear, currentQuarter, windowSize);
+      const sixQAttachRate = computeSixQuarterAverage(perQAttachRate, currentYear, currentQuarter, windowSize);
+      const sixQCustomerCount = computeSixQuarterAverage(perQCustomerCount, currentYear, currentQuarter, windowSize);
 
       // Overall fallback conversion rate (all-time average)
       let totalActualSqls = 0;
@@ -303,23 +311,32 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
                h.year === q.year && h.quarter === q.quarter
         );
 
+        const qmKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
+        const qm = qmMap.get(qmKey);
+
         let acvNew: number, acvUpsell: number;
+        let attachRate: number, customerCount: number;
         if (isHistorical(q.year, q.quarter, currentYear, currentQuarter)) {
-          const qmKey = `${region.id}-${sqlType.id}-${q.year}-${q.quarter}`;
-          const qm = qmMap.get(qmKey);
           acvNew = (qm && qm.avgAcvNew > 0) ? qm.avgAcvNew : defaultAcvNew;
           acvUpsell = (qm && qm.avgAcvUpsell > 0) ? qm.avgAcvUpsell : defaultAcvUpsell;
+          attachRate = (qm?.upsellAttachRate ?? 0) / 10000;
+          customerCount = qm?.customerCount ?? 0;
         } else {
           acvNew = sixQAcvNew ?? defaultAcvNew;
           acvUpsell = sixQAcvUpsell ?? defaultAcvUpsell;
+          attachRate = sixQAttachRate !== null ? sixQAttachRate / 10000 : 0;
+          customerCount = sixQCustomerCount !== null ? Math.round(sixQCustomerCount) : 0;
         }
 
+        // New business revenue: pipeline-driven (SQL → Opp → Win cascade)
         const wins = totalWinsPerQ[qo];
-        const winRateNew = defaultWinRateNew;
-        const winRateUpsell = defaultWinRateUpsell;
         const combinedWR = defaultCombinedWinRate;
-        const revenueNew = Math.round(wins * (winRateNew / (combinedWR || 1)) * acvNew);
-        const revenueUpsell = Math.round(wins * (winRateUpsell / (combinedWR || 1)) * acvUpsell);
+        const revenueNew = combinedWR > 0
+          ? Math.round(wins * (defaultWinRateNew / combinedWR) * acvNew)
+          : 0;
+
+        // Upsell revenue: attach_rate x customer_count x avg_upsell_ACV
+        const revenueUpsell = Math.round(attachRate * customerCount * acvUpsell);
 
         results.push({
           region: region.name,
@@ -329,6 +346,8 @@ export async function calculateCascade(input: CascadeInput): Promise<CascadeResu
           sqlVolume: historyRecord?.volume || 0,
           opportunities: Math.round(totalOppsPerQ[qo]),
           revenue: revenueNew + revenueUpsell,
+          revenueNew,
+          revenueUpsell,
         });
       }
     }
@@ -386,8 +405,8 @@ export async function saveCascadeResults(companyId: number, results: CascadeResu
       quarter: result.quarter,
       predictedSqls: result.sqlVolume,
       predictedOpps: Math.round(result.opportunities * CASCADE_CONSTANTS.OPPORTUNITY_PRECISION_MULTIPLIER),
-      predictedRevenueNew: Math.round(result.revenue * CASCADE_CONSTANTS.NEW_BUSINESS_REVENUE_SPLIT),
-      predictedRevenueUpsell: Math.round(result.revenue * CASCADE_CONSTANTS.UPSELL_REVENUE_SPLIT),
+      predictedRevenueNew: result.revenueNew,
+      predictedRevenueUpsell: result.revenueUpsell,
     });
   }
 

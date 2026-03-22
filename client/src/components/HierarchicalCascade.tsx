@@ -24,6 +24,10 @@ interface HierarchyQuarter {
   sql: MetricCell;
   ocr: MetricCell;
   owr: MetricCell;
+  revenueNew: number;
+  revenueUpsell: number;
+  customerCount: number;
+  attachRate: number;
 }
 
 interface HierarchyRow {
@@ -86,6 +90,19 @@ function fmt(n: number | null): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 10_000) return `${(n / 1_000).toFixed(0)}K`;
   return n.toFixed(0);
+}
+
+function fmtRevenue(cents: number): string {
+  if (cents === 0) return "";
+  const dollars = cents / 100;
+  if (dollars >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`;
+  if (dollars >= 1_000) return `$${(dollars / 1_000).toFixed(0)}K`;
+  return `$${dollars.toFixed(0)}`;
+}
+
+function fmtPct(basisPoints: number): string {
+  if (basisPoints === 0) return "";
+  return `${(basisPoints * 100).toFixed(1)}%`;
 }
 
 function MetricCellView({ cell, isHistorical }: { cell: MetricCell; isHistorical: boolean }) {
@@ -159,6 +176,29 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
               <div className="space-y-0.5">
                 <MetricCellView cell={rq.sql} isHistorical={rq.isHistorical} />
                 <MetricCellView cell={rq.ocr} isHistorical={rq.isHistorical} />
+                {(rq.revenueNew > 0 || rq.revenueUpsell > 0) && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1 justify-end cursor-help">
+                          <span className="font-mono text-[10px] text-blue-700">{fmtRevenue(rq.revenueNew)}</span>
+                          {rq.revenueUpsell > 0 && (
+                            <>
+                              <span className="text-muted-foreground text-[8px]">+</span>
+                              <span className="font-mono text-[10px] text-violet-700">{fmtRevenue(rq.revenueUpsell)}</span>
+                            </>
+                          )}
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="text-xs space-y-1">
+                        <div>New Biz: {fmtRevenue(rq.revenueNew)}</div>
+                        <div>Upsell: {fmtRevenue(rq.revenueUpsell)}</div>
+                        {rq.customerCount > 0 && <div>Customers: {rq.customerCount}</div>}
+                        {rq.attachRate > 0 && <div>Attach Rate: {fmtPct(rq.attachRate)}</div>}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             ) : null}
           </td>
@@ -182,7 +222,7 @@ export default function HierarchicalCascade({ quarters, global, regions, motions
               <th key={`${q.year}-${q.quarter}`} className="text-center p-2 border-r text-[10px] font-semibold" style={{ minWidth: COL_W }}>
                 <div>{q.label}</div>
                 <div className="flex justify-center gap-2 text-[8px] text-muted-foreground font-normal mt-0.5">
-                  <span>M/A</span>
+                  <span>M/A · Rev</span>
                 </div>
               </th>
             ))}

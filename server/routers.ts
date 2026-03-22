@@ -606,11 +606,12 @@ export const appRouter = router({
         const { computeRScores } = await import("./pearsonEngine");
         const { computeRag, computeAttainment } = await import("./ragEngine");
 
-        const [regionsList, sqlTypesList, forecastsData, actualsData, rScores] = await Promise.all([
+        const [regionsList, sqlTypesList, forecastsData, actualsData, qMetricsData, rScores] = await Promise.all([
           db.getRegionsByCompany(companyId).then(r => r.filter(x => x.enabled)),
           db.getSqlTypesByCompany(companyId).then(s => s.filter(x => x.enabled)),
           db.getForecastsByCompany(companyId),
           db.getActualsByCompany(companyId),
+          db.getQuarterlyMetricsByCompany(companyId),
           computeRScores(companyId),
         ]);
 
@@ -632,6 +633,10 @@ export const appRouter = router({
           sql: MetricCell;
           ocr: MetricCell;
           owr: MetricCell;
+          revenueNew: number;
+          revenueUpsell: number;
+          customerCount: number;
+          attachRate: number;
         }
         interface HierarchyRow {
           id: string;
@@ -654,11 +659,13 @@ export const appRouter = router({
             return { year: y, quarter: q, label: `Q${q} ${String(y).slice(2)}` };
           });
 
-        // Build forecast/actual lookup maps
+        // Build forecast/actual/quarterly-metrics lookup maps
         const fMap = new Map<string, typeof forecastsData[0]>();
         for (const f of forecastsData) fMap.set(`${f.regionId}-${f.sqlTypeId}-${f.year}-${f.quarter}`, f);
         const aMap = new Map<string, typeof actualsData[0]>();
         for (const a of actualsData) aMap.set(`${a.regionId}-${a.sqlTypeId}-${a.year}-${a.quarter}`, a);
+        const qmMap = new Map<string, typeof qMetricsData[0]>();
+        for (const qm of qMetricsData) qmMap.set(`${qm.regionId}-${qm.sqlTypeId}-${qm.year}-${qm.quarter}`, qm);
 
         const OPPS_MULT = 100; // OPPORTUNITY_PRECISION_MULTIPLIER
 
@@ -666,15 +673,28 @@ export const appRouter = router({
           return quarters.map(q => {
             const isHist = q.year < curYear || (q.year === curYear && q.quarter < curQ);
             let mSql = 0, mOcr = 0, aSql = 0, aOcr = 0, aOwr = 0;
+            let revNew = 0, revUpsell = 0, custCount = 0;
+            let upsellWonSum = 0;
             for (const rid of regionIds) {
               for (const sid of sqlTypeIds) {
                 const fk = `${rid}-${sid}-${q.year}-${q.quarter}`;
                 const f = fMap.get(fk);
                 const a = aMap.get(fk);
-                if (f) { mSql += f.predictedSqls; mOcr += f.predictedOpps / OPPS_MULT; }
+                const qm = qmMap.get(fk);
+                if (f) {
+                  mSql += f.predictedSqls;
+                  mOcr += f.predictedOpps / OPPS_MULT;
+                  revNew += f.predictedRevenueNew;
+                  revUpsell += f.predictedRevenueUpsell;
+                }
                 if (a) { aSql += a.actualSqls; aOcr += a.actualOpps; aOwr += a.actualWins; }
+                if (qm) {
+                  custCount += qm.customerCount;
+                  upsellWonSum += qm.totalUpsellWon;
+                }
               }
             }
+            const attachRate = custCount > 0 ? Math.round((upsellWonSum / custCount) * 10000) / 10000 : 0;
             return {
               year: q.year,
               quarter: q.quarter,
@@ -683,6 +703,10 @@ export const appRouter = router({
               sql: { model: mSql, actual: isHist ? aSql : null, rag: isHist ? computeRag(aSql, mSql) : null },
               ocr: { model: mOcr, actual: isHist ? aOcr : null, rag: isHist ? computeRag(aOcr, mOcr) : null },
               owr: { model: 0, actual: isHist ? aOwr : null, rag: null },
+              revenueNew: revNew,
+              revenueUpsell: revUpsell,
+              customerCount: custCount,
+              attachRate,
             };
           });
         }
@@ -805,6 +829,9 @@ export const appRouter = router({
           defaultSqlTimingTwoQ: 100,
           defaultOppTiming: [0.14, 0.33, 0.25, 0.15, 0.07, 0.04, 0.02],
           defaultConversionRate: 5000,
+          companyCustomerField: "",
+          companyCustomerValues: [],
+          companyRegionProperty: "",
         };
       }),
 
@@ -833,6 +860,9 @@ export const appRouter = router({
           defaultSqlTimingTwoQ: z.number().int().min(0).max(10000).optional(),
           defaultOppTiming: z.array(z.number().min(0).max(1)).optional(),
           defaultConversionRate: z.number().int().min(0).max(10000).optional(),
+          companyCustomerField: z.string().optional(),
+          companyCustomerValues: z.array(z.string()).optional(),
+          companyRegionProperty: z.string().optional(),
         }),
       }))
       .mutation(async ({ input }) => {

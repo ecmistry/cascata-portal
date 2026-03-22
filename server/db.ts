@@ -717,6 +717,7 @@ export async function upsertActual(data: InsertActual) {
       actualOpps: data.actualOpps,
       actualRevenue: data.actualRevenue,
       actualWins: data.actualWins,
+      actualUpsellWins: data.actualUpsellWins,
       updatedAt: new Date(),
     },
   });
@@ -971,6 +972,8 @@ export async function upsertQuarterlyMetric(data: InsertQuarterlyMetric) {
       avgAcvUpsell: data.avgAcvUpsell,
       totalClosedWon: data.totalClosedWon,
       totalClosedLost: data.totalClosedLost,
+      totalUpsellWon: data.totalUpsellWon,
+      upsellAttachRate: data.upsellAttachRate,
       customerCount: data.customerCount,
       updatedAt: new Date(),
     },

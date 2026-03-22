@@ -251,6 +251,9 @@ export default function CascataTest() {
   const [defaultSqlTimingTwoQ, setDefaultSqlTimingTwoQ] = useState(100);
   const [defaultOppTiming, setDefaultOppTiming] = useState("14, 33, 25, 15, 7, 4, 2");
   const [defaultConversionRate, setDefaultConversionRate] = useState(5000);
+  const [companyCustomerField, setCompanyCustomerField] = useState("");
+  const [companyCustomerValues, setCompanyCustomerValues] = useState<string[]>([]);
+  const [companyRegionProperty, setCompanyRegionProperty] = useState("");
 
   // Initialize from saved config
   useEffect(() => {
@@ -278,6 +281,9 @@ export default function CascataTest() {
         setDefaultOppTiming(savedConfig.defaultOppTiming.map((v: number) => Math.round(v * 100)).join(", "));
       }
       setDefaultConversionRate(savedConfig.defaultConversionRate ?? 5000);
+      setCompanyCustomerField(savedConfig.companyCustomerField ?? "");
+      setCompanyCustomerValues(savedConfig.companyCustomerValues ?? []);
+      setCompanyRegionProperty(savedConfig.companyRegionProperty ?? "");
     }
   }, [savedConfig]);
 
@@ -321,6 +327,9 @@ export default function CascataTest() {
         defaultSqlTimingTwoQ,
         defaultOppTiming: defaultOppTiming.split(",").map(v => parseFloat(v.trim()) / 100).filter(v => !isNaN(v)),
         defaultConversionRate,
+        companyCustomerField: companyCustomerField || undefined,
+        companyCustomerValues: companyCustomerValues.length > 0 ? companyCustomerValues : undefined,
+        companyRegionProperty: companyRegionProperty || undefined,
       },
     });
   };
@@ -611,6 +620,56 @@ export default function CascataTest() {
                   />
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Company Object (Upsell/Customer Tracking) */}
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Company Object (Upsell &amp; Customer Tracking)</CardTitle>
+            <p className="text-xs text-muted-foreground mt-1">
+              Configure how Cascata identifies current customers from HubSpot Companies.
+              This enables the upsell cascade: <strong>attach rate &times; customer count &times; avg upsell ACV</strong>.
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border p-3 space-y-2">
+              <p className="text-sm font-medium">Which Company property identifies customer status?</p>
+              <Input
+                value={companyCustomerField}
+                onChange={(e) => setCompanyCustomerField(e.target.value)}
+                placeholder="e.g. hs_lead_status or customer_status"
+                className="h-8 text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                The HubSpot Company property name whose value indicates the company is a current customer.
+              </p>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-2">
+              <p className="text-sm font-medium">What values mean "is a customer"?</p>
+              <TagInput
+                values={companyCustomerValues}
+                onChange={setCompanyCustomerValues}
+                placeholder="e.g. customer or active"
+              />
+              <p className="text-xs text-muted-foreground">
+                Property values that indicate a company is an active customer. The sync will count companies matching any of these values.
+              </p>
+            </div>
+
+            <div className="rounded-lg border p-3 space-y-2">
+              <p className="text-sm font-medium">Which Company property maps to a region?</p>
+              <Input
+                value={companyRegionProperty}
+                onChange={(e) => setCompanyRegionProperty(e.target.value)}
+                placeholder="e.g. industry or company_pod"
+                className="h-8 text-xs"
+              />
+              <p className="text-xs text-muted-foreground">
+                The HubSpot Company property used to assign companies to regions. Values are matched using the same region alias/mapping rules.
+              </p>
             </div>
           </CardContent>
         </Card>
